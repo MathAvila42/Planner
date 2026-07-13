@@ -12,7 +12,6 @@ import { dayPlanRouter } from './routes/dayPlan.js';
 import { goalsRouter } from './routes/goals.js';
 import { completionsRouter } from './routes/completions.js';
 import { uploadsRouter } from './routes/uploads.js';
-import { adminRouter } from './routes/admin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -28,7 +27,6 @@ app.use('/api/day-plan', dayPlanRouter);
 app.use('/api/goals', goalsRouter);
 app.use('/api/completions', completionsRouter);
 app.use('/api/uploads', uploadsRouter);
-app.use('/api/admin', adminRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
