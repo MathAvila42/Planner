@@ -2,11 +2,7 @@ node_modules/
 dist/
 build/
 .env
+.env.*
+!.env.example
 *.log
 *.tsbuildinfo
-
-# runtime data
-server/data/*
-!server/data/.gitkeep
-server/uploads/*
-!server/uploads/.gitkeep

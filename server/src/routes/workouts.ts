@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { nanoid } from 'nanoid';
-import { db } from '../db.js';
+import { supabase } from '../supabaseClient.js';
 import { requireAuth, type AuthedRequest } from '../auth.js';
+import { wrap } from '../wrap.js';
 import type { Workout } from '../types.js';
 
 export const workoutsRouter = Router();
@@ -12,33 +13,46 @@ interface WorkoutRow {
   cardio_modality: string; cardio_duration: string; cardio_extra: string; notes: string;
 }
 
-function serializeWorkout(row: WorkoutRow): Workout {
-  const warmup = (db.prepare('SELECT text FROM workout_warmup_items WHERE workout_id = ? ORDER BY sort_order ASC').all(row.id) as { text: string }[]).map((r) => r.text);
-  const stretches = db.prepare('SELECT id, text, photo_url as photoUrl FROM workout_stretch_items WHERE workout_id = ? ORDER BY sort_order ASC').all(row.id) as { id: string; text: string; photoUrl: string | null }[];
-  const core = db.prepare('SELECT id, text, photo_url as photoUrl FROM workout_core_items WHERE workout_id = ? ORDER BY sort_order ASC').all(row.id) as { id: string; text: string; photoUrl: string | null }[];
-  const exercises = db.prepare('SELECT id, name, sets, reps, load, note, photo_url as photoUrl FROM workout_exercises WHERE workout_id = ? ORDER BY sort_order ASC').all(row.id) as Workout['exercises'];
+async function ownedWorkoutRow(userId: string, id: string): Promise<WorkoutRow | undefined> {
+  const { data, error } = await supabase.from('workouts').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  return data ?? undefined;
+}
+
+async function serializeWorkout(row: WorkoutRow): Promise<Workout> {
+  const [warmupRes, stretchesRes, coreRes, exercisesRes] = await Promise.all([
+    supabase.from('workout_warmup_items').select('text').eq('workout_id', row.id).order('sort_order', { ascending: true }),
+    supabase.from('workout_stretch_items').select('id, text, photo_url').eq('workout_id', row.id).order('sort_order', { ascending: true }),
+    supabase.from('workout_core_items').select('id, text, photo_url').eq('workout_id', row.id).order('sort_order', { ascending: true }),
+    supabase.from('workout_exercises').select('id, name, sets, reps, load, note, photo_url').eq('workout_id', row.id).order('sort_order', { ascending: true }),
+  ]);
+  if (warmupRes.error) throw warmupRes.error;
+  if (stretchesRes.error) throw stretchesRes.error;
+  if (coreRes.error) throw coreRes.error;
+  if (exercisesRes.error) throw exercisesRes.error;
+
   return {
     id: row.id, name: row.name, subtitle: row.subtitle, day: row.day_of_week, time: row.time,
-    warmup, stretches, core, exercises,
+    warmup: (warmupRes.data || []).map((r) => r.text),
+    stretches: (stretchesRes.data || []).map((r) => ({ id: r.id, text: r.text, photoUrl: r.photo_url })),
+    core: (coreRes.data || []).map((r) => ({ id: r.id, text: r.text, photoUrl: r.photo_url })),
+    exercises: (exercisesRes.data || []).map((r) => ({ id: r.id, name: r.name, sets: r.sets, reps: r.reps, load: r.load, note: r.note, photoUrl: r.photo_url })),
     cardio: { modality: row.cardio_modality, duration: row.cardio_duration, extra: row.cardio_extra },
     notes: row.notes,
   };
 }
 
-function ownedWorkoutRow(userId: string, id: string): WorkoutRow | undefined {
-  return db.prepare('SELECT * FROM workouts WHERE id = ? AND user_id = ?').get(id, userId) as WorkoutRow | undefined;
-}
+workoutsRouter.get('/', wrap<AuthedRequest>(async (req, res) => {
+  const { data, error } = await supabase.from('workouts').select('*').eq('user_id', req.userId).order('sort_order', { ascending: true });
+  if (error) throw error;
+  res.json(await Promise.all((data || []).map((row) => serializeWorkout(row as WorkoutRow))));
+}));
 
-workoutsRouter.get('/', (req: AuthedRequest, res) => {
-  const rows = db.prepare('SELECT * FROM workouts WHERE user_id = ? ORDER BY sort_order ASC').all(req.userId) as WorkoutRow[];
-  res.json(rows.map(serializeWorkout));
-});
-
-workoutsRouter.get('/:id', (req: AuthedRequest, res) => {
-  const row = ownedWorkoutRow(req.userId!, req.params.id);
+workoutsRouter.get('/:id', wrap<AuthedRequest>(async (req, res) => {
+  const row = await ownedWorkoutRow(req.userId!, req.params.id);
   if (!row) { res.status(404).json({ error: 'Treino não encontrado.' }); return; }
-  res.json(serializeWorkout(row));
-});
+  res.json(await serializeWorkout(row));
+}));
 
 interface WorkoutPayload {
   name?: string; subtitle?: string; day?: number | null; time?: string; notes?: string;
@@ -47,142 +61,211 @@ interface WorkoutPayload {
   exercises?: { name: string; sets?: string; reps?: string; load?: string; note?: string }[];
 }
 
-function replaceNested(workoutId: string, body: WorkoutPayload) {
-  if (body.warmup) {
-    db.prepare('DELETE FROM workout_warmup_items WHERE workout_id = ?').run(workoutId);
-    const stmt = db.prepare('INSERT INTO workout_warmup_items (id, workout_id, text, sort_order) VALUES (?, ?, ?, ?)');
-    body.warmup.filter((t) => t && t.trim()).forEach((t, i) => stmt.run(nanoid(), workoutId, t.trim(), i));
+function workoutFields(body: WorkoutPayload) {
+  return {
+    name: (body.name || '').trim() || 'Treino sem nome',
+    subtitle: (body.subtitle || '').trim(),
+    day_of_week: body.day ?? null,
+    time: body.time || '07:00',
+    cardio_modality: body.cardio?.modality || '',
+    cardio_duration: body.cardio?.duration || '',
+    cardio_extra: body.cardio?.extra || '',
+    notes: body.notes || '',
+  };
+}
+
+async function insertNestedFresh(workoutId: string, body: WorkoutPayload) {
+  const warmup = (body.warmup || []).filter((t) => t && t.trim());
+  if (warmup.length) {
+    const { error } = await supabase.from('workout_warmup_items').insert(
+      warmup.map((text, i) => ({ id: nanoid(), workout_id: workoutId, text: text.trim(), sort_order: i })),
+    );
+    if (error) throw error;
   }
-  if (body.stretches) {
-    db.prepare('DELETE FROM workout_stretch_items WHERE workout_id = ?').run(workoutId);
-    const stmt = db.prepare('INSERT INTO workout_stretch_items (id, workout_id, text, sort_order) VALUES (?, ?, ?, ?)');
-    body.stretches.filter((t) => t && t.trim()).forEach((t, i) => stmt.run(nanoid(), workoutId, t.trim(), i));
+  const stretches = (body.stretches || []).filter((t) => t && t.trim());
+  if (stretches.length) {
+    const { error } = await supabase.from('workout_stretch_items').insert(
+      stretches.map((text, i) => ({ id: nanoid(), workout_id: workoutId, text: text.trim(), sort_order: i })),
+    );
+    if (error) throw error;
   }
-  if (body.core) {
-    db.prepare('DELETE FROM workout_core_items WHERE workout_id = ?').run(workoutId);
-    const stmt = db.prepare('INSERT INTO workout_core_items (id, workout_id, text, sort_order) VALUES (?, ?, ?, ?)');
-    body.core.filter((t) => t && t.trim()).forEach((t, i) => stmt.run(nanoid(), workoutId, t.trim(), i));
+  const core = (body.core || []).filter((t) => t && t.trim());
+  if (core.length) {
+    const { error } = await supabase.from('workout_core_items').insert(
+      core.map((text, i) => ({ id: nanoid(), workout_id: workoutId, text: text.trim(), sort_order: i })),
+    );
+    if (error) throw error;
   }
-  if (body.exercises) {
-    db.prepare('DELETE FROM workout_exercises WHERE workout_id = ?').run(workoutId);
-    const stmt = db.prepare('INSERT INTO workout_exercises (id, workout_id, name, sets, reps, load, note, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-    body.exercises.filter((e) => e.name && e.name.trim()).forEach((e, i) =>
-      stmt.run(nanoid(), workoutId, e.name.trim(), e.sets || '', e.reps || '', e.load || '', e.note || '', i));
+  const exercises = (body.exercises || []).filter((e) => e.name && e.name.trim());
+  if (exercises.length) {
+    const { error } = await supabase.from('workout_exercises').insert(
+      exercises.map((e, i) => ({ id: nanoid(), workout_id: workoutId, name: e.name.trim(), sets: e.sets || '', reps: e.reps || '', load: e.load || '', note: e.note || '', sort_order: i })),
+    );
+    if (error) throw error;
   }
 }
 
-workoutsRouter.post('/', (req: AuthedRequest, res) => {
+workoutsRouter.post('/', wrap<AuthedRequest>(async (req, res) => {
   const body = req.body as WorkoutPayload;
-  const name = (body.name || '').trim() || 'Treino sem nome';
-  const maxOrder = db.prepare('SELECT COALESCE(MAX(sort_order), -1) as m FROM workouts WHERE user_id = ?').get(req.userId) as { m: number };
+  const { data: maxRow, error: maxError } = await supabase
+    .from('workouts').select('sort_order').eq('user_id', req.userId).order('sort_order', { ascending: false }).limit(1).maybeSingle();
+  if (maxError) throw maxError;
+
   const id = nanoid();
-  db.prepare(`INSERT INTO workouts (id, user_id, name, subtitle, day_of_week, time, cardio_modality, cardio_duration, cardio_extra, notes, sort_order)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(id, req.userId, name, (body.subtitle || '').trim(), body.day ?? null, body.time || '07:00',
-      body.cardio?.modality || '', body.cardio?.duration || '', body.cardio?.extra || '', body.notes || '', maxOrder.m + 1);
-  replaceNested(id, body);
-  res.json(serializeWorkout(ownedWorkoutRow(req.userId!, id)!));
-});
+  const { error } = await supabase.from('workouts').insert({
+    id, user_id: req.userId, sort_order: (maxRow?.sort_order ?? -1) + 1, ...workoutFields(body),
+  });
+  if (error) throw error;
 
-// Edits keep each item's existing row (and therefore its uploaded photo) as long as it
-// stays at the same position — only text/order changes; only added/removed rows are
-// inserted/deleted. A full delete-and-reinsert would wipe every photo on every save.
-function upsertTextItemsByPosition(table: 'workout_stretch_items' | 'workout_core_items', workoutId: string, texts: string[]) {
+  await insertNestedFresh(id, body);
+  res.json(await serializeWorkout((await ownedWorkoutRow(req.userId!, id))!));
+}));
+
+// Edits keep each item's existing row (and therefore its uploaded photo) as long as it stays
+// at the same position — only text/order changes; only added/removed rows are inserted/deleted.
+// A full delete-and-reinsert would wipe every photo on every save.
+async function upsertTextItemsByPosition(table: 'workout_stretch_items' | 'workout_core_items', workoutId: string, texts: string[]) {
   const clean = texts.filter((t) => t && t.trim()).map((t) => t.trim());
-  const existing = db.prepare(`SELECT id FROM ${table} WHERE workout_id = ? ORDER BY sort_order ASC`).all(workoutId) as { id: string }[];
-  const updateStmt = db.prepare(`UPDATE ${table} SET text = ?, sort_order = ? WHERE id = ?`);
-  const insertStmt = db.prepare(`INSERT INTO ${table} (id, workout_id, text, sort_order) VALUES (?, ?, ?, ?)`);
-  const deleteStmt = db.prepare(`DELETE FROM ${table} WHERE id = ?`);
-  clean.forEach((text, i) => {
-    if (existing[i]) updateStmt.run(text, i, existing[i].id);
-    else insertStmt.run(nanoid(), workoutId, text, i);
-  });
-  existing.slice(clean.length).forEach((row) => deleteStmt.run(row.id));
+  const { data: existing, error: fetchError } = await supabase.from(table).select('id').eq('workout_id', workoutId).order('sort_order', { ascending: true });
+  if (fetchError) throw fetchError;
+  const rows = existing || [];
+
+  for (let i = 0; i < clean.length; i++) {
+    if (rows[i]) {
+      const { error } = await supabase.from(table).update({ text: clean[i], sort_order: i }).eq('id', rows[i].id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from(table).insert({ id: nanoid(), workout_id: workoutId, text: clean[i], sort_order: i });
+      if (error) throw error;
+    }
+  }
+  const toDelete = rows.slice(clean.length).map((r) => r.id);
+  if (toDelete.length) {
+    const { error } = await supabase.from(table).delete().in('id', toDelete);
+    if (error) throw error;
+  }
 }
 
-function upsertExercisesByPosition(workoutId: string, exercises: NonNullable<WorkoutPayload['exercises']>) {
+async function upsertExercisesByPosition(workoutId: string, exercises: NonNullable<WorkoutPayload['exercises']>) {
   const clean = exercises.filter((e) => e.name && e.name.trim());
-  const existing = db.prepare('SELECT id FROM workout_exercises WHERE workout_id = ? ORDER BY sort_order ASC').all(workoutId) as { id: string }[];
-  const updateStmt = db.prepare('UPDATE workout_exercises SET name = ?, sets = ?, reps = ?, load = ?, note = ?, sort_order = ? WHERE id = ?');
-  const insertStmt = db.prepare('INSERT INTO workout_exercises (id, workout_id, name, sets, reps, load, note, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-  const deleteStmt = db.prepare('DELETE FROM workout_exercises WHERE id = ?');
-  clean.forEach((e, i) => {
-    if (existing[i]) updateStmt.run(e.name.trim(), e.sets || '', e.reps || '', e.load || '', e.note || '', i, existing[i].id);
-    else insertStmt.run(nanoid(), workoutId, e.name.trim(), e.sets || '', e.reps || '', e.load || '', e.note || '', i);
-  });
-  existing.slice(clean.length).forEach((row) => deleteStmt.run(row.id));
+  const { data: existing, error: fetchError } = await supabase.from('workout_exercises').select('id').eq('workout_id', workoutId).order('sort_order', { ascending: true });
+  if (fetchError) throw fetchError;
+  const rows = existing || [];
+
+  for (let i = 0; i < clean.length; i++) {
+    const e = clean[i];
+    const fields = { name: e.name.trim(), sets: e.sets || '', reps: e.reps || '', load: e.load || '', note: e.note || '', sort_order: i };
+    if (rows[i]) {
+      const { error } = await supabase.from('workout_exercises').update(fields).eq('id', rows[i].id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from('workout_exercises').insert({ id: nanoid(), workout_id: workoutId, ...fields });
+      if (error) throw error;
+    }
+  }
+  const toDelete = rows.slice(clean.length).map((r) => r.id);
+  if (toDelete.length) {
+    const { error } = await supabase.from('workout_exercises').delete().in('id', toDelete);
+    if (error) throw error;
+  }
 }
 
-workoutsRouter.put('/:id', (req: AuthedRequest, res) => {
-  const existing = ownedWorkoutRow(req.userId!, req.params.id);
+workoutsRouter.put('/:id', wrap<AuthedRequest>(async (req, res) => {
+  const existing = await ownedWorkoutRow(req.userId!, req.params.id);
   if (!existing) { res.status(404).json({ error: 'Treino não encontrado.' }); return; }
   const body = req.body as WorkoutPayload;
-  const name = (body.name || '').trim() || 'Treino sem nome';
-  db.prepare(`UPDATE workouts SET name = ?, subtitle = ?, day_of_week = ?, time = ?, cardio_modality = ?, cardio_duration = ?, cardio_extra = ?, notes = ? WHERE id = ?`)
-    .run(name, (body.subtitle || '').trim(), body.day ?? null, body.time || '07:00',
-      body.cardio?.modality || '', body.cardio?.duration || '', body.cardio?.extra || '', body.notes || '', existing.id);
-  if (body.warmup) {
-    db.prepare('DELETE FROM workout_warmup_items WHERE workout_id = ?').run(existing.id);
-    const stmt = db.prepare('INSERT INTO workout_warmup_items (id, workout_id, text, sort_order) VALUES (?, ?, ?, ?)');
-    body.warmup.filter((t) => t && t.trim()).forEach((t, i) => stmt.run(nanoid(), existing.id, t.trim(), i));
-  }
-  upsertTextItemsByPosition('workout_stretch_items', existing.id, body.stretches ?? []);
-  upsertTextItemsByPosition('workout_core_items', existing.id, body.core ?? []);
-  upsertExercisesByPosition(existing.id, body.exercises ?? []);
-  res.json(serializeWorkout(ownedWorkoutRow(req.userId!, existing.id)!));
-});
 
-workoutsRouter.patch('/:id', (req: AuthedRequest, res) => {
-  const existing = ownedWorkoutRow(req.userId!, req.params.id);
+  const { error } = await supabase.from('workouts').update(workoutFields(body)).eq('id', existing.id);
+  if (error) throw error;
+
+  const { error: warmupDeleteError } = await supabase.from('workout_warmup_items').delete().eq('workout_id', existing.id);
+  if (warmupDeleteError) throw warmupDeleteError;
+  const warmup = (body.warmup || []).filter((t) => t && t.trim());
+  if (warmup.length) {
+    const { error: warmupInsertError } = await supabase.from('workout_warmup_items').insert(
+      warmup.map((text, i) => ({ id: nanoid(), workout_id: existing.id, text: text.trim(), sort_order: i })),
+    );
+    if (warmupInsertError) throw warmupInsertError;
+  }
+
+  await upsertTextItemsByPosition('workout_stretch_items', existing.id, body.stretches ?? []);
+  await upsertTextItemsByPosition('workout_core_items', existing.id, body.core ?? []);
+  await upsertExercisesByPosition(existing.id, body.exercises ?? []);
+
+  res.json(await serializeWorkout((await ownedWorkoutRow(req.userId!, existing.id))!));
+}));
+
+workoutsRouter.patch('/:id', wrap<AuthedRequest>(async (req, res) => {
+  const existing = await ownedWorkoutRow(req.userId!, req.params.id);
   if (!existing) { res.status(404).json({ error: 'Treino não encontrado.' }); return; }
   const body = req.body as Partial<WorkoutPayload>;
-  const next = {
-    name: body.name !== undefined ? body.name : existing.name,
-    subtitle: body.subtitle !== undefined ? body.subtitle : existing.subtitle,
-    day_of_week: body.day !== undefined ? body.day : existing.day_of_week,
-    time: body.time !== undefined ? body.time : existing.time,
-  };
-  db.prepare('UPDATE workouts SET name = ?, subtitle = ?, day_of_week = ?, time = ? WHERE id = ?')
-    .run(next.name, next.subtitle, next.day_of_week, next.time, existing.id);
-  res.json(serializeWorkout(ownedWorkoutRow(req.userId!, existing.id)!));
-});
 
-workoutsRouter.delete('/:id', (req: AuthedRequest, res) => {
-  const existing = ownedWorkoutRow(req.userId!, req.params.id);
+  const patch: Record<string, unknown> = {};
+  if (body.name !== undefined) patch.name = body.name;
+  if (body.subtitle !== undefined) patch.subtitle = body.subtitle;
+  if (body.day !== undefined) patch.day_of_week = body.day;
+  if (body.time !== undefined) patch.time = body.time;
+
+  if (Object.keys(patch).length) {
+    const { error } = await supabase.from('workouts').update(patch).eq('id', existing.id);
+    if (error) throw error;
+  }
+  res.json(await serializeWorkout((await ownedWorkoutRow(req.userId!, existing.id))!));
+}));
+
+workoutsRouter.delete('/:id', wrap<AuthedRequest>(async (req, res) => {
+  const existing = await ownedWorkoutRow(req.userId!, req.params.id);
   if (!existing) { res.status(404).json({ error: 'Treino não encontrado.' }); return; }
-  db.prepare('DELETE FROM workouts WHERE id = ?').run(existing.id);
+  const { error } = await supabase.from('workouts').delete().eq('id', existing.id);
+  if (error) throw error;
   res.json({ ok: true });
-});
+}));
 
 // --- quick nested-item updates (used from the workout detail screen) ---
 
-workoutsRouter.patch('/:workoutId/exercises/:id', (req: AuthedRequest, res) => {
-  const row = db.prepare(`SELECT we.id FROM workout_exercises we JOIN workouts w ON w.id = we.workout_id
-                           WHERE we.id = ? AND we.workout_id = ? AND w.user_id = ?`)
-    .get(req.params.id, req.params.workoutId, req.userId) as { id: string } | undefined;
-  if (!row) { res.status(404).json({ error: 'Exercício não encontrado.' }); return; }
+workoutsRouter.patch('/:workoutId/exercises/:id', wrap<AuthedRequest>(async (req, res) => {
+  const owned = await ownedWorkoutRow(req.userId!, req.params.workoutId);
+  if (!owned) { res.status(404).json({ error: 'Exercício não encontrado.' }); return; }
   const body = req.body as { load?: string; photoUrl?: string | null };
-  if (body.load !== undefined) db.prepare('UPDATE workout_exercises SET load = ? WHERE id = ?').run(body.load, row.id);
-  if (body.photoUrl !== undefined) db.prepare('UPDATE workout_exercises SET photo_url = ? WHERE id = ?').run(body.photoUrl, row.id);
-  res.json({ ok: true });
-});
+  const patch: Record<string, unknown> = {};
+  if (body.load !== undefined) patch.load = body.load;
+  if (body.photoUrl !== undefined) patch.photo_url = body.photoUrl;
 
-workoutsRouter.patch('/:workoutId/stretch-items/:id', (req: AuthedRequest, res) => {
-  const row = db.prepare(`SELECT si.id FROM workout_stretch_items si JOIN workouts w ON w.id = si.workout_id
-                           WHERE si.id = ? AND si.workout_id = ? AND w.user_id = ?`)
-    .get(req.params.id, req.params.workoutId, req.userId) as { id: string } | undefined;
-  if (!row) { res.status(404).json({ error: 'Alongamento não encontrado.' }); return; }
-  const body = req.body as { photoUrl?: string | null };
-  if (body.photoUrl !== undefined) db.prepare('UPDATE workout_stretch_items SET photo_url = ? WHERE id = ?').run(body.photoUrl, row.id);
+  const { data, error } = await supabase
+    .from('workout_exercises').update(patch)
+    .eq('id', req.params.id).eq('workout_id', owned.id)
+    .select('id').maybeSingle();
+  if (error) throw error;
+  if (!data) { res.status(404).json({ error: 'Exercício não encontrado.' }); return; }
   res.json({ ok: true });
-});
+}));
 
-workoutsRouter.patch('/:workoutId/core-items/:id', (req: AuthedRequest, res) => {
-  const row = db.prepare(`SELECT ci.id FROM workout_core_items ci JOIN workouts w ON w.id = ci.workout_id
-                           WHERE ci.id = ? AND ci.workout_id = ? AND w.user_id = ?`)
-    .get(req.params.id, req.params.workoutId, req.userId) as { id: string } | undefined;
-  if (!row) { res.status(404).json({ error: 'Item de core não encontrado.' }); return; }
+workoutsRouter.patch('/:workoutId/stretch-items/:id', wrap<AuthedRequest>(async (req, res) => {
+  const owned = await ownedWorkoutRow(req.userId!, req.params.workoutId);
+  if (!owned) { res.status(404).json({ error: 'Alongamento não encontrado.' }); return; }
   const body = req.body as { photoUrl?: string | null };
-  if (body.photoUrl !== undefined) db.prepare('UPDATE workout_core_items SET photo_url = ? WHERE id = ?').run(body.photoUrl, row.id);
+  if (body.photoUrl === undefined) { res.json({ ok: true }); return; }
+
+  const { data, error } = await supabase
+    .from('workout_stretch_items').update({ photo_url: body.photoUrl })
+    .eq('id', req.params.id).eq('workout_id', owned.id)
+    .select('id').maybeSingle();
+  if (error) throw error;
+  if (!data) { res.status(404).json({ error: 'Alongamento não encontrado.' }); return; }
   res.json({ ok: true });
-});
+}));
+
+workoutsRouter.patch('/:workoutId/core-items/:id', wrap<AuthedRequest>(async (req, res) => {
+  const owned = await ownedWorkoutRow(req.userId!, req.params.workoutId);
+  if (!owned) { res.status(404).json({ error: 'Item de core não encontrado.' }); return; }
+  const body = req.body as { photoUrl?: string | null };
+  if (body.photoUrl === undefined) { res.json({ ok: true }); return; }
+
+  const { data, error } = await supabase
+    .from('workout_core_items').update({ photo_url: body.photoUrl })
+    .eq('id', req.params.id).eq('workout_id', owned.id)
+    .select('id').maybeSingle();
+  if (error) throw error;
+  if (!data) { res.status(404).json({ error: 'Item de core não encontrado.' }); return; }
+  res.json({ ok: true });
+}));

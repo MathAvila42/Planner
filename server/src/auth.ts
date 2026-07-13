@@ -1,24 +1,14 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import type { Request, Response, NextFunction } from 'express';
-import { db } from './db.js';
+import { supabase } from './supabaseClient.js';
+import { wrap } from './wrap.js';
 import type { User } from './types.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, '..', 'data');
-fs.mkdirSync(dataDir, { recursive: true });
-const secretPath = path.join(dataDir, 'session-secret.txt');
-
-let secret: string;
-if (fs.existsSync(secretPath)) {
-  secret = fs.readFileSync(secretPath, 'utf8').trim();
-} else {
-  secret = crypto.randomBytes(48).toString('hex');
-  fs.writeFileSync(secretPath, secret, { mode: 0o600 });
+const rawSecret = process.env.SESSION_SECRET;
+if (!rawSecret) {
+  throw new Error('SESSION_SECRET é obrigatório (defina uma string aleatória longa no .env local ou nas variáveis de ambiente do Vercel).');
 }
+const secret: string = rawSecret;
 
 export const COOKIE_NAME = 'rotina_session';
 
@@ -30,26 +20,23 @@ export interface AuthedRequest extends Request {
   userId?: string;
 }
 
-export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
+export const requireAuth = wrap<AuthedRequest>(async (req, res, next: NextFunction) => {
   const token = req.cookies?.[COOKIE_NAME];
-  if (!token) {
+  if (!token) { res.status(401).json({ error: 'not_authenticated' }); return; }
+  let payload: { sub: string };
+  try {
+    payload = jwt.verify(token, secret) as { sub: string };
+  } catch {
     res.status(401).json({ error: 'not_authenticated' });
     return;
   }
-  try {
-    const payload = jwt.verify(token, secret) as { sub: string };
-    const user = db.prepare('SELECT id FROM users WHERE id = ?').get(payload.sub) as { id: string } | undefined;
-    if (!user) {
-      res.status(401).json({ error: 'not_authenticated' });
-      return;
-    }
-    req.userId = user.id;
-    next();
-  } catch {
-    res.status(401).json({ error: 'not_authenticated' });
-  }
-}
+  const user = await getUserById(payload.sub);
+  if (!user) { res.status(401).json({ error: 'not_authenticated' }); return; }
+  req.userId = user.id;
+  next();
+});
 
-export function getUserById(id: string): User | undefined {
-  return db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(id) as User | undefined;
+export async function getUserById(id: string): Promise<User | undefined> {
+  const { data } = await supabase.from('users').select('id, name, email').eq('id', id).maybeSingle();
+  return data ?? undefined;
 }

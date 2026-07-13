@@ -1,81 +1,101 @@
 import { Router } from 'express';
 import { nanoid } from 'nanoid';
-import { db } from '../db.js';
+import { supabase } from '../supabaseClient.js';
 import { requireAuth, type AuthedRequest } from '../auth.js';
-import type { BlockType } from '../types.js';
+import { wrap } from '../wrap.js';
+import type { BlockType, DaySelections } from '../types.js';
 
 export const dayPlanRouter = Router();
 dayPlanRouter.use(requireAuth);
 
-function ensureSelectionsRow(userId: string, dow: number) {
-  const existing = db.prepare('SELECT 1 FROM day_selections WHERE user_id = ? AND day_of_week = ?').get(userId, dow);
-  if (!existing) {
-    db.prepare('INSERT INTO day_selections (user_id, day_of_week) VALUES (?, ?)').run(userId, dow);
-  }
+async function ensureSelectionsRow(userId: string, dow: number) {
+  const { error } = await supabase
+    .from('day_selections')
+    .upsert({ user_id: userId, day_of_week: dow }, { onConflict: 'user_id,day_of_week', ignoreDuplicates: true });
+  if (error) throw error;
 }
 
-dayPlanRouter.get('/:dow/blocks', (req: AuthedRequest, res) => {
+dayPlanRouter.get('/:dow/blocks', wrap<AuthedRequest>(async (req, res) => {
   const dow = Number(req.params.dow);
-  const rows = db.prepare(`SELECT id, time, type, label, meal_type as mealType FROM day_blocks
-                            WHERE user_id = ? AND day_of_week = ? ORDER BY time ASC`).all(req.userId, dow);
-  res.json(rows);
-});
+  const { data, error } = await supabase
+    .from('day_blocks')
+    .select('id, time, type, label, meal_type')
+    .eq('user_id', req.userId).eq('day_of_week', dow)
+    .order('time', { ascending: true });
+  if (error) throw error;
+  res.json((data || []).map((r) => ({ id: r.id, time: r.time, type: r.type, label: r.label, mealType: r.meal_type })));
+}));
 
-dayPlanRouter.post('/:dow/blocks', (req: AuthedRequest, res) => {
+dayPlanRouter.post('/:dow/blocks', wrap<AuthedRequest>(async (req, res) => {
   const dow = Number(req.params.dow);
   const time = String(req.body?.time || '12:00');
   const label = String(req.body?.label || '');
   const id = nanoid();
-  db.prepare(`INSERT INTO day_blocks (id, user_id, day_of_week, time, type, label, meal_type)
-              VALUES (?, ?, ?, ?, 'plain', ?, NULL)`).run(id, req.userId, dow, time, label);
+  const { error } = await supabase.from('day_blocks').insert({
+    id, user_id: req.userId, day_of_week: dow, time, type: 'plain', label, meal_type: null,
+  });
+  if (error) throw error;
   res.json({ id, time, type: 'plain' as BlockType, label, mealType: null });
-});
+}));
 
-dayPlanRouter.patch('/blocks/:id', (req: AuthedRequest, res) => {
-  const existing = db.prepare('SELECT * FROM day_blocks WHERE id = ? AND user_id = ?').get(req.params.id, req.userId) as
-    { id: string; time: string; label: string } | undefined;
-  if (!existing) { res.status(404).json({ error: 'Atividade não encontrada.' }); return; }
-  const time = req.body?.time !== undefined ? String(req.body.time) : existing.time;
-  const label = req.body?.label !== undefined ? String(req.body.label) : existing.label;
-  db.prepare('UPDATE day_blocks SET time = ?, label = ? WHERE id = ?').run(time, label, existing.id);
+dayPlanRouter.patch('/blocks/:id', wrap<AuthedRequest>(async (req, res) => {
+  const patch: Record<string, string> = {};
+  if (req.body?.time !== undefined) patch.time = String(req.body.time);
+  if (req.body?.label !== undefined) patch.label = String(req.body.label);
+
+  const { data, error } = await supabase
+    .from('day_blocks').update(patch)
+    .eq('id', req.params.id).eq('user_id', req.userId)
+    .select('id').maybeSingle();
+  if (error) throw error;
+  if (!data) { res.status(404).json({ error: 'Atividade não encontrada.' }); return; }
   res.json({ ok: true });
-});
+}));
 
-dayPlanRouter.delete('/blocks/:id', (req: AuthedRequest, res) => {
-  db.prepare('DELETE FROM day_blocks WHERE id = ? AND user_id = ?').run(req.params.id, req.userId);
+dayPlanRouter.delete('/blocks/:id', wrap<AuthedRequest>(async (req, res) => {
+  const { error } = await supabase.from('day_blocks').delete().eq('id', req.params.id).eq('user_id', req.userId);
+  if (error) throw error;
   res.json({ ok: true });
-});
+}));
 
-dayPlanRouter.get('/:dow/selections', (req: AuthedRequest, res) => {
+dayPlanRouter.get('/:dow/selections', wrap<AuthedRequest>(async (req, res) => {
   const dow = Number(req.params.dow);
-  ensureSelectionsRow(req.userId!, dow);
-  const row = db.prepare(`SELECT cafe_selected_id as cafeSelectedId, lanche_manha_selected_id as lancheManhaSelectedId,
-                                  lanche_tarde_selected_id as lancheTardeSelectedId, jantar_selected_id as jantarSelectedId,
-                                  almoco_checked as almocoChecked
-                           FROM day_selections WHERE user_id = ? AND day_of_week = ?`).get(req.userId, dow) as any;
-  row.almocoChecked = !!row.almocoChecked;
-  res.json(row);
-});
+  await ensureSelectionsRow(req.userId!, dow);
+  const { data, error } = await supabase
+    .from('day_selections')
+    .select('cafe_selected_id, lanche_manha_selected_id, lanche_tarde_selected_id, jantar_selected_id, almoco_checked')
+    .eq('user_id', req.userId).eq('day_of_week', dow).single();
+  if (error) throw error;
+  res.json({
+    cafeSelectedId: data.cafe_selected_id,
+    lancheManhaSelectedId: data.lanche_manha_selected_id,
+    lancheTardeSelectedId: data.lanche_tarde_selected_id,
+    jantarSelectedId: data.jantar_selected_id,
+    almocoChecked: !!data.almoco_checked,
+  });
+}));
 
-const SELECTION_COLUMNS: Record<string, string> = {
+const SELECTION_COLUMNS: Record<keyof Omit<DaySelections, 'almocoChecked'>, string> = {
   cafeSelectedId: 'cafe_selected_id',
   lancheManhaSelectedId: 'lanche_manha_selected_id',
   lancheTardeSelectedId: 'lanche_tarde_selected_id',
   jantarSelectedId: 'jantar_selected_id',
 };
 
-dayPlanRouter.patch('/:dow/selections', (req: AuthedRequest, res) => {
+dayPlanRouter.patch('/:dow/selections', wrap<AuthedRequest>(async (req, res) => {
   const dow = Number(req.params.dow);
-  ensureSelectionsRow(req.userId!, dow);
-  const body = req.body as Partial<{ cafeSelectedId: string; lancheManhaSelectedId: string; lancheTardeSelectedId: string; jantarSelectedId: string; almocoChecked: boolean }>;
+  await ensureSelectionsRow(req.userId!, dow);
+
+  const body = req.body as Partial<DaySelections>;
+  const patch: Record<string, unknown> = {};
   for (const [key, col] of Object.entries(SELECTION_COLUMNS)) {
-    if (key in body) {
-      db.prepare(`UPDATE day_selections SET ${col} = ? WHERE user_id = ? AND day_of_week = ?`).run((body as any)[key], req.userId, dow);
-    }
+    if (key in body) patch[col] = (body as any)[key];
   }
-  if ('almocoChecked' in body) {
-    db.prepare('UPDATE day_selections SET almoco_checked = ? WHERE user_id = ? AND day_of_week = ?')
-      .run(body.almocoChecked ? 1 : 0, req.userId, dow);
+  if ('almocoChecked' in body) patch.almoco_checked = !!body.almocoChecked;
+
+  if (Object.keys(patch).length > 0) {
+    const { error } = await supabase.from('day_selections').update(patch).eq('user_id', req.userId).eq('day_of_week', dow);
+    if (error) throw error;
   }
   res.json({ ok: true });
-});
+}));

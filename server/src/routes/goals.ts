@@ -1,14 +1,22 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { supabase } from '../supabaseClient.js';
 import { requireAuth, type AuthedRequest } from '../auth.js';
+import { wrap } from '../wrap.js';
 
 export const goalsRouter = Router();
 goalsRouter.use(requireAuth);
 
-goalsRouter.get('/', (req: AuthedRequest, res) => {
-  const row = db.prepare('SELECT project, water, protein FROM goals WHERE user_id = ?').get(req.userId) as
-    { project: string; water: string; protein: string } | undefined;
+goalsRouter.get('/', wrap<AuthedRequest>(async (req, res) => {
+  const { data: row, error } = await supabase
+    .from('goals').select('project, water, protein')
+    .eq('user_id', req.userId).maybeSingle();
+  if (error) throw error;
   if (!row) { res.json(null); return; }
-  const timeline = db.prepare('SELECT month, foco FROM goals_timeline WHERE user_id = ? ORDER BY sort_order ASC').all(req.userId);
-  res.json({ ...row, timeline });
-});
+
+  const { data: timeline, error: timelineError } = await supabase
+    .from('goals_timeline').select('month, foco')
+    .eq('user_id', req.userId).order('sort_order', { ascending: true });
+  if (timelineError) throw timelineError;
+
+  res.json({ ...row, timeline: timeline || [] });
+}));
