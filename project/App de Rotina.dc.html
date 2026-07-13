@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { margin:0; background:#EAECEF; }
+    * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+    input[type="time"]::-webkit-calendar-picker-indicator { opacity:0.5; }
+  </style>
+</helmet>
+
+<div style="min-height:100vh; width:100%; display:flex; justify-content:center; background:#EAECEF; font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;">
+  <div style="width:100%; max-width:560px; min-height:100vh; background:#F5F6F8; display:flex; flex-direction:column; position:relative;">
+
+    <!-- ===================== LOGIN ===================== -->
+    <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:32px; background:#FFFFFF; min-height:100vh;">
+        <div style="width:72px; height:72px; border-radius:20px; background:#1E3A8A; display:flex; align-items:center; justify-content:center; margin-bottom:24px;">
+          <div style="width:26px; height:26px; border-radius:50%; background:#FF6A2B;"></div>
+        </div>
+        <div style="font-size:24px; font-weight:700; color:#1C1C1E; margin-bottom:6px; text-align:center;">Rotina &amp; Bem-estar</div>
+        <div style="font-size:15px; color:#8A8F98; margin-bottom:36px; text-align:center;">Entre com seu e-mail para acessar seu plano</div>
+
+        <input
+          type="email"
+          placeholder="seu@email.com"
+          value="{{ loginEmail }}"
+          onChange="{{ onEmailChange }}"
+          onKeyDown="{{ onEmailKeyDown }}"
+          style="width:100%; max-width:340px; height:52px; border-radius:16px; border:1px solid #E4E5E9; background:#F7F8FA; padding:0 18px; font-size:16px; color:#1C1C1E; outline:none; margin-bottom:12px;"
+        />
+
+        <sc-if value="{{ hasLoginError }}" hint-placeholder-val="{{ false }}">
+          <div style="width:100%; max-width:340px; font-size:13px; color:#E0472C; margin-bottom:12px; padding:0 2px;">{{ loginError }}</div>
+        </sc-if>
+
+        <button onClick="{{ onLoginClick }}" style="width:100%; max-width:340px; height:52px; border-radius:16px; border:none; background:#1E3A8A; color:#fff; font-size:16px; font-weight:600; cursor:pointer; margin-top:4px;">Entrar</button>
+
+        <div style="font-size:12px; color:#B7BBC2; margin-top:28px; text-align:center; line-height:1.5;">Monique · moniquebeck1996@gmail.com<br/>Matheus · e.matheus.avila@gmail.com</div>
+      </div>
+    </sc-if>
+
+    <!-- ===================== APP SHELL ===================== -->
+    <sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
+      <div style="min-height:100vh; display:flex; flex-direction:column; background:#F5F6F8;">
+
+        <div style="flex:1; padding-bottom:14px;">
+
+          <!-- ---------- HOME TAB ---------- -->
+          <sc-if value="{{ tabIsHome }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:24px 20px 4px;">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div>
+                  <div style="font-size:24px; font-weight:700; color:#1C1C1E;">{{ greeting }}</div>
+                  <div style="font-size:14px; color:#9098A3; margin-top:2px; text-transform:capitalize;">{{ todayLabel }}</div>
+                </div>
+                <div onClick="{{ onAvatarClick }}" style="width:40px; height:40px; border-radius:50%; background:#1E3A8A; color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; cursor:pointer; flex-shrink:0;">{{ avatarLetter }}</div>
+              </div>
+
+              <!-- week strip -->
+              <div style="display:flex; gap:6px; margin-top:20px; margin-bottom:22px;">
+                <sc-for list="{{ weekDaysVM }}" as="day" hint-placeholder-count="7">
+                  <div onClick="{{ day.onClick }}" style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 0; border-radius:16px; cursor:pointer; background:{{ day.wrapBg }};">
+                    <div style="font-size:11px; font-weight:600; color:{{ day.labelColor }}; text-transform:uppercase; letter-spacing:0.3px;">{{ day.label }}</div>
+                    <div style="width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600; background:{{ day.circleBg }}; color:{{ day.circleColor }};">{{ day.dateNum }}</div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <!-- goals card -->
+              <sc-if value="{{ hasGoals }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ onOpenGoals }}" style="display:flex; align-items:center; justify-content:space-between; background:#1E3A8A; border-radius:22px; padding:18px 20px; margin-bottom:16px; cursor:pointer;">
+                  <div>
+                    <div style="font-size:12px; color:#B9C4EA; font-weight:600; letter-spacing:0.3px; text-transform:uppercase;">{{ goalsProject }}</div>
+                    <div style="font-size:15px; color:#fff; font-weight:600; margin-top:4px;">Ver objetivo completo</div>
+                  </div>
+                  <div style="width:38px; height:38px; border-radius:50%; background:#FF6A2B; display:flex; align-items:center; justify-content:center; color:#fff; font-size:16px; font-weight:700;">→</div>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="padding:0 20px;">
+              <sc-for list="{{ dayBlocksVM }}" as="block" hint-placeholder-count="6">
+                <div style="margin-bottom:12px;">
+
+                  <sc-if value="{{ block.isPlain }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; align-items:center; gap:8px; padding:6px 4px;">
+                      <input type="time" value="{{ block.time }}" onChange="{{ block.onTimeChange }}" style="width:76px; border:none; background:transparent; font-size:12px; color:#B0B5BE; font-weight:600; flex-shrink:0; padding:0;" />
+                      <input value="{{ block.label }}" onChange="{{ block.onLabelChange }}" placeholder="Nome da atividade" style="flex:1; border:none; background:transparent; font-size:14px; color:#9098A3; padding:2px 0; outline:none;" />
+                      <div onClick="{{ block.onRemove }}" style="width:24px; height:24px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; color:#D7D9DE; cursor:pointer; flex-shrink:0;">×</div>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ block.isMeal }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; gap:12px;">
+                      <input type="time" value="{{ block.time }}" onChange="{{ block.onTimeChange }}" style="width:76px; border:none; background:transparent; font-size:12px; color:#B0B5BE; font-weight:600; flex-shrink:0; padding:0; margin-top:16px; height:20px;" />
+                      <div style="flex:1; background:#fff; border-radius:20px; padding:16px 18px; box-shadow:0 1px 2px rgba(16,24,40,0.04),0 8px 20px rgba(16,24,40,0.05);">
+                        <div style="font-size:15px; font-weight:700; color:#1C1C1E; margin-bottom:10px;">{{ block.mealLabel }}</div>
+
+                        <sc-if value="{{ block.hasOptions }}" hint-placeholder-val="{{ false }}">
+                          <sc-for list="{{ block.options }}" as="opt" hint-placeholder-count="3">
+                            <div onClick="{{ opt.onSelect }}" style="display:flex; align-items:center; gap:10px; padding:7px 0; cursor:pointer;">
+                              <div style="width:18px; height:18px; border-radius:50%; border:2px solid {{ opt.ringColor }}; background:{{ opt.fillColor }}; flex-shrink:0;"></div>
+                              <div style="font-size:14px; color:{{ opt.textColor }}; font-weight:{{ opt.textWeight }};">{{ opt.name }}</div>
+                            </div>
+                          </sc-for>
+                        </sc-if>
+                        <sc-if value="{{ block.noOptions }}" hint-placeholder-val="{{ false }}">
+                          <div style="font-size:13px; color:#B0B5BE;">Nenhuma opção cadastrada ainda.</div>
+                        </sc-if>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ block.isLunch }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; gap:12px;">
+                      <input type="time" value="{{ block.time }}" onChange="{{ block.onTimeChange }}" style="width:76px; border:none; background:transparent; font-size:12px; color:#B0B5BE; font-weight:600; flex-shrink:0; padding:0; margin-top:16px; height:20px;" />
+                      <div onClick="{{ block.onToggle }}" style="flex:1; display:flex; align-items:center; gap:12px; background:#fff; border-radius:20px; padding:16px 18px; box-shadow:0 1px 2px rgba(16,24,40,0.04),0 8px 20px rgba(16,24,40,0.05); cursor:pointer;">
+                        <div style="width:22px; height:22px; border-radius:7px; border:2px solid {{ block.ringColor }}; background:{{ block.fillColor }}; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; flex-shrink:0;">{{ block.checkMark }}</div>
+                        <div style="font-size:15px; font-weight:700; color:#1C1C1E;">Almoço</div>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ block.isWorkout }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; gap:12px;">
+                      <input type="time" value="{{ block.time }}" onChange="{{ block.onTimeChange }}" style="width:76px; border:none; background:transparent; font-size:12px; color:#B0B5BE; font-weight:600; flex-shrink:0; padding:0; margin-top:16px; height:20px;" />
+                      <div onClick="{{ block.onOpen }}" style="flex:1; display:flex; align-items:center; gap:14px; background:#fff; border-radius:20px; padding:14px 18px; box-shadow:0 1px 2px rgba(16,24,40,0.04),0 8px 20px rgba(16,24,40,0.05); cursor:pointer;">
+                        <div style="width:44px; height:44px; border-radius:14px; background:#FFEDE3; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:#FF6A2B; flex-shrink:0;">{{ block.initial }}</div>
+                        <div style="flex:1;">
+                          <div style="font-size:15px; font-weight:700; color:#1C1C1E;">{{ block.name }}</div>
+                          <div style="font-size:13px; color:#9098A3; margin-top:1px;">{{ block.subtitle }}</div>
+                        </div>
+                        <div style="color:#C6CAD2; font-size:18px;">›</div>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                </div>
+              </sc-for>
+
+              <sc-if value="{{ dayHasNoBlocks }}" hint-placeholder-val="{{ false }}">
+                <div style="text-align:center; padding:40px 20px 20px; color:#B0B5BE;">
+                  <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Nenhuma atividade cadastrada</div>
+                  <div style="font-size:13px;">Use as abas Treinos e Refeições para montar sua rotina.</div>
+                </div>
+              </sc-if>
+
+              <div onClick="{{ onAddActivity }}" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:14px; margin:6px 0 20px; border-radius:16px; border:1.5px dashed #D7D9DE; color:#1E3A8A; font-size:14px; font-weight:600; cursor:pointer;">+ Adicionar atividade</div>
+            </div>
+          </sc-if>
+
+          <!-- ---------- WORKOUTS TAB ---------- -->
+          <sc-if value="{{ tabIsWorkouts }}" hint-placeholder-val="{{ false }}">
+
+            <sc-if value="{{ wSubIsList }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:24px 20px 8px; display:flex; align-items:center; justify-content:space-between;">
+                <div style="font-size:26px; font-weight:700; color:#1C1C1E;">Treinos</div>
+                <button onClick="{{ onNewWorkout }}" style="border:none; background:#1E3A8A; color:#fff; font-size:13px; font-weight:600; padding:10px 16px; border-radius:14px; cursor:pointer;">+ Novo</button>
+              </div>
+              <div style="padding:8px 20px 0;">
+                <sc-for list="{{ workoutsVM }}" as="w" hint-placeholder-count="4">
+                  <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                    <div onClick="{{ w.onOpen }}" style="flex:1; display:flex; align-items:center; gap:14px; background:#fff; border-radius:20px; padding:16px 18px; box-shadow:0 1px 2px rgba(16,24,40,0.04),0 8px 20px rgba(16,24,40,0.05); cursor:pointer;">
+                      <div style="width:46px; height:46px; border-radius:14px; background:#EEF2FF; display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:700; color:#1E3A8A; flex-shrink:0;">{{ w.initial }}</div>
+                      <div style="flex:1;">
+                        <div style="font-size:15px; font-weight:700; color:#1C1C1E;">{{ w.name }}</div>
+                        <div style="font-size:13px; color:#9098A3; margin-top:1px;">{{ w.subtitle }}</div>
+                        <div style="font-size:12px; color:#FF6A2B; margin-top:4px; font-weight:600;">{{ w.dayLabel }}</div>
+                      </div>
+                      <div style="color:#C6CAD2; font-size:18px;">›</div>
+                    </div>
+                    <div onClick="{{ w.onDelete }}" style="width:40px; height:40px; border-radius:12px; background:#FFF1EE; color:#E0472C; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; flex-shrink:0;">×</div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ noWorkouts }}" hint-placeholder-val="{{ false }}">
+                  <div style="text-align:center; padding:60px 20px; color:#B0B5BE;">
+                    <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Nenhum treino cadastrado</div>
+                    <div style="font-size:13px;">Toque em "+ Novo" para criar seu primeiro treino.</div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ wSubIsDetail }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:24px 20px 8px; display:flex; align-items:center; gap:12px;">
+                <div onClick="{{ onBackToWorkoutList }}" style="font-size:22px; color:#1E3A8A; cursor:pointer; width:24px;">‹</div>
+                <div style="flex:1; font-size:20px; font-weight:700; color:#1C1C1E;">{{ activeWorkout.name }}</div>
+                <div onClick="{{ onEditActiveWorkout }}" style="font-size:14px; font-weight:600; color:#1E3A8A; cursor:pointer;">Editar</div>
+              </div>
+              <div style="padding:4px 20px 0;">
+                <div style="font-size:14px; color:#9098A3; margin-bottom:4px;">{{ activeWorkout.subtitle }}</div>
+                <div style="font-size:13px; color:#FF6A2B; font-weight:600; margin-bottom:20px;">{{ activeWorkout.dayTimeLabel }}</div>
+
+                <sc-if value="{{ activeWorkout.hasWarmup }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:13px; font-weight:700; color:#9098A3; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:8px;">Aquecimento</div>
+                  <div style="background:#fff; border-radius:18px; padding:6px 18px; margin-bottom:20px; box-shadow:0 1px 2px rgba(16,24,40,0.04),0 8px 20px rgba(16,24,40,0.05);">
+                    <sc-for list="{{ activeWorkout.warmup }}" as="w" hint-placeholder-count="2">
+                      <div style="padding:10px 0; border-bottom:1px solid #F1F2F4; font-size:14px; color:#33363B;">{{ w }}</div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ activeWorkout.hasStretches }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:13px; font-weight:700; color:#9098A3; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:8px;">Alongamento</div>
+                  <div style="background:#fff; border-radius:18px; padding:6px 18px; margin-bottom:8px; box-shadow:0 1px 2px rgba(16,24,40,0.04),0 8px 20px rgba(16,24,40,0.05);">
+                    <sc-for list="{{ activeWorkout.stretchesTodo }}" as="st" hint-placeholder-count="2">
+                      <div style="padding:10px 0; border-bottom:1px solid #F1F2F4;">
+                        <div onClick="{{ st.onToggle }}" style="display:flex; align-items:center; gap:12px; cursor:pointer;">
+                          <div style="width:20px; height:20px; border-radius:6px; border:2px solid #D7D9DE; flex-shrink:0;"></div>
+                          <div style="font-size:14px; color:#33363B;">{{ st.label }}</div>
+                        </div>
+                        <div style="width:100%; height:100px; margin-top:8px; border-radius:12px; overflow:hidden;">
+                          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="{{ st.photoId }}" shape="rounded" radius="12" placeholder="Foto do alongamento" hint-size="100%,100px"></x-import>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <sc-if value="{{ activeWorkout.hasStretchesDone }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:11px; font-weight:700; color:#B0B5BE; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">Concluído</div>
+                    <div style="background:#fff; border-radius:18px; padding:6px 18px; margin-bottom:20px; box-shadow:0 1px 2px rgba(16,24,40,0.04),0 8px 20px rgba(16,24,40,0.05);">
+                      <sc-for list="{{ activeWorkout.stretchesDone }}" as="st" hint-placeholder-count="1">
+                        <div onClick="{{ st.onToggle }}" style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #F1F2F4; cursor:pointer;">
+                          <div style="width:20px; height:20px; border-radius:6px; background:#FF6A2B; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px; flex-shrink:0;">✓</div>
+                          <div style="font-size:14px; color:#B0B5BE; text-decoration:line-through;">{{ st.label }}</div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </sc-if>
+
+                <sc-if value="{{ activeWorkout.hasExercises }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:13px; font-weight:700; color:#9098A3; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:8px;">Exercícios</div>
+                  <sc-for list="{{ activeWorkout.exercisesTodo }}" as="ex" hint-placeholder-count="3">
+                    <div style="background:#fff; border-radius:18px; padding:14px 18px; margin-bottom:10px; box-shadow:0 1px 2px rgba(16,24,40,0.04),0 8px 20px rgba(16,24,40,0.05);">
+                      <div style="display:flex; gap:12px;">
+                        <div onClick="{{ ex.onToggle }}" style="width:20px; height:20px; border-radius:6px; border:2px solid #D7D9DE; flex-shrink:0; margin-top:2px; cursor:pointer;"></div>
+                        <div style="flex:1;">
+                          <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <div style="font-size:14.5px; font-weight:700; color:#1C1C1E;">{{ ex.name }}</div>
+                            <div style="font-size:13px; color:#1E3A8A; font-weight:700;">{{ ex.setsReps }}</div>
+                          </div>
+                          <sc-if value="{{ ex.hasNote }}" hint-placeholder-val="{{ false }}">
+                            <div style="font-size:12.5px; color:#FF6A2B; margin-top:5px;">{{ ex.note }}</div>
+                          </sc-if>
+                          <div style="width:100%; height:120px; margin-top:10px; border-radius:14px; overflow:hidden;">
+                            <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="{{ ex.photoId }}" shape="rounded" radius="14" placeholder="Foto do exercício" hint-size="100%,120px"></x-import>
+                          </div>
+                          <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+                            <div style="font-size:12px; color:#9098A3; font-weight:600;">Carga</div>
+                            <input value="{{ ex.load }}" onChange="{{ ex.onLoadChange }}" placeholder="Ex: 20 kg" style="flex:1; height:36px; border-radius:10px; border:1px solid #E4E5E9; padding:0 12px; font-size:13px; outline:none;" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ activeWorkout.hasExercisesDone }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:11px; font-weight:700; color:#B0B5BE; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">Concluído</div>
+                    <sc-for list="{{ activeWorkout.exercisesDone }}" as="ex" hint-placeholder-count="1">
+                      <div style="background:#F7F8FA; border-radius:18px; padding:14px 18px; margin-bottom:10px;">
+                        <div style="display:flex; gap:12px; align-items:center;">
+                          <div onClick="{{ ex.onToggle }}" style="width:20px; height:20px; border-radius:6px; background:#FF6A2B; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px; flex-shrink:0; cursor:pointer;">✓</div>
+                          <div style="flex:1;">
+                            <div style="font-size:14.5px; font-weight:700; color:#B0B5BE; text-decoration:line-through;">{{ ex.name }}</div>
+                          </div>
+                          <div style="font-size:13px; color:#B0B5BE; font-weight:700;">{{ ex.setsReps }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </sc-if>
+                </sc-if>
+
+                <sc-if value="{{ activeWorkout.hasCore }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:13px; font-weight:700; color:#9098A3; text-transform:uppercase; letter-spacing:0.4px; margin:14px 0 8px;">Core</div>
+                  <div style="background:#fff; border-radius:18px; padding:6px 18px; margin-bottom:20px; box-shadow:0 1px 2px rgba(16,24,40,0.04),0 8px 20px rgba(16,24,40,0.05);">
+                    <sc-for list="{{ activeWorkout.coreItems }}" as="c" hint-placeholder-count="2">
+                      <div style="padding:10px 0; border-bottom:1px solid #F1F2F4;">
+                        <div style="font-size:14px; color:#33363B;">{{ c.label }}</div>
+                        <div style="width:100%; height:100px; margin-top:8px; border-radius:12px; overflow:hidden;">
+                          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="{{ c.photoId }}" shape="rounded" radius="12" placeholder="Foto do exercício de core" hint-size="100%,100px"></x-import>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ activeWorkout.hasCardio }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:13px; font-weight:700; color:#9098A3; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:8px;">Cardio</div>
+                  <div style="background:#fff; border-radius:18px; padding:16px 18px; margin-bottom:20px; box-shadow:0 1px 2px rgba(16,24,40,0.04),0 8px 20px rgba(16,24,40,0.05);">
+                    <div style="font-size:14.5px; font-weight:700; color:#1C1C1E;">{{ activeWorkout.cardioModality }}</div>
+                    <div style="font-size:13px; color:#9098A3; margin-top:3px;">{{ activeWorkout.cardioDetail }}</div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ activeWorkout.hasNotes }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:13px; font-weight:700; color:#9098A3; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:8px;">Observações</div>
+                  <div style="background:#FFF7ED; border-radius:18px; padding:14px 18px; margin-bottom:20px; font-size:13.5px; color:#8A5A2E; line-height:1.5;">{{ activeWorkout.notes }}</div>
+                </sc-if>
+
+                <div onClick="{{ onDeleteActiveWorkout }}" style="text-align:center; font-size:14px; color:#E0472C; font-weight:600; padding:14px 0 30px; cursor:pointer;">Excluir treino</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ wSubIsEditor }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:24px 20px 8px; display:flex; align-items:center; gap:12px;">
+                <div onClick="{{ onCancelEdit }}" style="font-size:14px; color:#9098A3; cursor:pointer;">Cancelar</div>
+                <div style="flex:1; text-align:center; font-size:16px; font-weight:700; color:#1C1C1E;">{{ editorTitle }}</div>
+                <div onClick="{{ onSaveWorkout }}" style="font-size:14px; color:#1E3A8A; font-weight:700; cursor:pointer;">Salvar</div>
+              </div>
+
+              <div style="padding:8px 20px 40px;">
+                <div style="font-size:12px; font-weight:700; color:#9098A3; text-transform:uppercase; margin-bottom:6px;">Nome do treino</div>
+                <input value="{{ draftName }}" onChange="{{ onDraftNameChange }}" placeholder="Ex: Inferiores A" style="width:100%; height:46px; border-radius:14px; border:1px solid #E4E5E9; background:#fff; padding:0 16px; font-size:15px; margin-bottom:14px; outline:none;" />
+
+                <div style="font-size:12px; font-weight:700; color:#9098A3; text-transform:uppercase; margin-bottom:6px;">Grupo muscular / descrição</div>
+                <input value="{{ draftSubtitle }}" onChange="{{ onDraftSubtitleChange }}" placeholder="Ex: Pernas (Quadríceps)" style="width:100%; height:46px; border-radius:14px; border:1px solid #E4E5E9; background:#fff; padding:0 16px; font-size:15px; margin-bottom:14px; outline:none;" />
+
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                  <div style="flex:1;">
+                    <div style="font-size:12px; font-weight:700; color:#9098A3; text-transform:uppercase; margin-bottom:6px;">Dia da semana</div>
+                    <select value="{{ draftDay }}" onChange="{{ onDraftDayChange }}" style="width:100%; height:46px; border-radius:14px; border:1px solid #E4E5E9; background:#fff; padding:0 12px; font-size:14px; outline:none;">
+                      <sc-for list="{{ dayOptionsVM }}" as="opt" hint-placeholder-count="8">
+                        <option value="{{ opt.value }}">{{ opt.label }}</option>
+                      </sc-for>
+                    </select>
+                  </div>
+                  <div style="flex:1;">
+                    <div style="font-size:12px; font-weight:700; color:#9098A3; text-transform:uppercase; margin-bottom:6px;">Horário</div>
+                    <input type="time" value="{{ draftTime }}" onChange="{{ onDraftTimeChange }}" style="width:100%; height:46px; border-radius:14px; border:1px solid #E4E5E9; background:#fff; padding:0 12px; font-size:14px; outline:none;" />
+                  </div>
+                </div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                  <div style="font-size:12px; font-weight:700; color:#9098A3; text-transform:uppercase;">Aquecimento</div>
+                  <div onClick="{{ onAddWarmup }}" style="font-size:13px; color:#1E3A8A; font-weight:700; cursor:pointer;">+ Adicionar</div>
+                </div>
+                <sc-for list="{{ warmupVM }}" as="row" hint-placeholder-count="2">
+                  <div style="display:flex; gap:8px; margin-bottom:8px;">
+                    <input value="{{ row.val }}" onChange="{{ row.onChange }}" placeholder="Ex: 10 min bicicleta" style="flex:1; height:42px; border-radius:12px; border:1px solid #E4E5E9; background:#fff; padding:0 14px; font-size:14px; outline:none;" />
+                    <div onClick="{{ row.onRemove }}" style="width:42px; height:42px; border-radius:12px; background:#FFF1EE; color:#E0472C; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer;">×</div>
+                  </div>
+                </sc-for>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin:16px 0 8px;">
+                  <div style="font-size:12px; font-weight:700; color:#9098A3; text-transform:uppercase;">Alongamento</div>
+                  <div onClick="{{ onAddStretch }}" style="font-size:13px; color:#1E3A8A; font-weight:700; cursor:pointer;">+ Adicionar</div>
+                </div>
+                <sc-for list="{{ stretchesVM }}" as="row" hint-placeholder-count="2">
+                  <div style="display:flex; gap:8px; margin-bottom:8px;">
+                    <input value="{{ row.val }}" onChange="{{ row.onChange }}" placeholder="Ex: Alongamento Isquiotibiais — 30 seg" style="flex:1; height:42px; border-radius:12px; border:1px solid #E4E5E9; background:#fff; padding:0 14px; font-size:14px; outline:none;" />
+                    <div onClick="{{ row.onRemove }}" style="width:42px; height:42px; border-radius:12px; background:#FFF1EE; color:#E0472C; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer;">×</div>
+                  </div>
+                </sc-for>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin:16px 0 8px;">
+                  <div style="font-size:12px; font-weight:700; color:#9098A3; text-transform:uppercase;">Exercícios</div>
+                  <div onClick="{{ onAddExercise }}" style="font-size:13px; color:#1E3A8A; font-weight:700; cursor:pointer;">+ Adicionar</div>
+                </div>
+                <sc-for list="{{ exercisesVM }}" as="ex" hint-placeholder-count="2">
+                  <div style="background:#fff; border:1px solid #ECEDF0; border-radius:16px; padding:14px; margin-bottom:10px;">
+                    <div style="display:flex; gap:8px; margin-bottom:8px;">
+                      <input value="{{ ex.name }}" onChange="{{ ex.onName }}" placeholder="Nome do exercício" style="flex:1; height:40px; border-radius:10px; border:1px solid #E4E5E9; padding:0 12px; font-size:13.5px; outline:none;" />
+                      <div onClick="{{ ex.onRemove }}" style="width:40px; height:40px; border-radius:10px; background:#FFF1EE; color:#E0472C; display:flex; align-items:center; justify-content:center; font-size:15px; cursor:pointer; flex-shrink:0;">×</div>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-bottom:8px;">
+                      <input value="{{ ex.sets }}" onChange="{{ ex.onSets }}" placeholder="Séries" style="flex:1; height:38px; border-radius:10px; border:1px solid #E4E5E9; padding:0 10px; font-size:13px; outline:none;" />
+                      <input value="{{ ex.reps }}" onChange="{{ ex.onReps }}" placeholder="Reps" style="flex:1; height:38px; border-radius:10px; border:1px solid #E4E5E9; padding:0 10px; font-size:13px; outline:none;" />
+                      <input value="{{ ex.load }}" onChange="{{ ex.onLoad }}" placeholder="Carga" style="flex:1; height:38px; border-radius:10px; border:1px solid #E4E5E9; padding:0 10px; font-size:13px; outline:none;" />
+                    </div>
+                    <input value="{{ ex.note }}" onChange="{{ ex.onNote }}" placeholder="Observação" style="width:100%; height:38px; border-radius:10px; border:1px solid #E4E5E9; padding:0 10px; font-size:13px; outline:none;" />
+                  </div>
+                </sc-for>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin:16px 0 8px;">
+                  <div style="font-size:12px; font-weight:700; color:#9098A3; text-transform:uppercase;">Core</div>
+                  <div onClick="{{ onAddCore }}" style="font-size:13px; color:#1E3A8A; font-weight:700; cursor:pointer;">+ Adicionar</div>
+                </div>
+                <sc-for list="{{ coreVM }}" as="row" hint-placeholder-count="1">
+                  <div style="display:flex; gap:8px; margin-bottom:8px;">
+                    <input value="{{ row.val }}" onChange="{{ row.onChange }}" placeholder="Ex: Prancha — 3×30 seg" style="flex:1; height:42px; border-radius:12px; border:1px solid #E4E5E9; background:#fff; padding:0 14px; font-size:14px; outline:none;" />
+                    <div onClick="{{ row.onRemove }}" style="width:42px; height:42px; border-radius:12px; background:#FFF1EE; color:#E0472C; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer;">×</div>
+                  </div>
+                </sc-for>
+
+                <div style="font-size:12px; font-weight:700; color:#9098A3; text-transform:uppercase; margin:16px 0 8px;">Cardio</div>
+                <div style="display:flex; gap:8px; margin-bottom:8px;">
+                  <input value="{{ draftCardioModality }}" onChange="{{ onCardioModalityChange }}" placeholder="Modalidade" style="flex:1; height:42px; border-radius:12px; border:1px solid #E4E5E9; background:#fff; padding:0 14px; font-size:14px; outline:none;" />
+                  <input value="{{ draftCardioDuration }}" onChange="{{ onCardioDurationChange }}" placeholder="Duração" style="flex:1; height:42px; border-radius:12px; border:1px solid #E4E5E9; background:#fff; padding:0 14px; font-size:14px; outline:none;" />
+                </div>
+                <input value="{{ draftCardioExtra }}" onChange="{{ onCardioExtraChange }}" placeholder="Detalhe (inclinação, velocidade...)" style="width:100%; height:42px; border-radius:12px; border:1px solid #E4E5E9; background:#fff; padding:0 14px; font-size:14px; outline:none; margin-bottom:16px;" />
+
+                <div style="font-size:12px; font-weight:700; color:#9098A3; text-transform:uppercase; margin-bottom:8px;">Observações</div>
+                <textarea value="{{ draftNotes }}" onChange="{{ onNotesChange }}" placeholder="Observações gerais do treino" style="width:100%; height:80px; border-radius:14px; border:1px solid #E4E5E9; background:#fff; padding:12px 14px; font-size:14px; outline:none; font-family:inherit; resize:none;"></textarea>
+              </div>
+            </sc-if>
+          </sc-if>
+
+          <!-- ---------- MEALS TAB ---------- -->
+          <sc-if value="{{ tabIsMeals }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:24px 20px 14px;">
+              <div style="font-size:26px; font-weight:700; color:#1C1C1E; margin-bottom:16px;">Refeições</div>
+              <div style="display:flex; background:#EAECEF; border-radius:14px; padding:4px; gap:4px; flex-wrap:wrap;">
+                <sc-for list="{{ mealTypeTabsVM }}" as="mt" hint-placeholder-count="4">
+                  <div onClick="{{ mt.onClick }}" style="flex:1; min-width:70px; text-align:center; padding:9px 4px; border-radius:11px; font-size:12.5px; font-weight:600; cursor:pointer; background:{{ mt.bg }}; color:{{ mt.color }};">{{ mt.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="padding:0 20px 30px;">
+              <sc-for list="{{ mealOptionsVM }}" as="opt" hint-placeholder-count="4">
+                <div style="display:flex; align-items:center; gap:10px; background:#fff; border-radius:16px; padding:14px 16px; margin-bottom:10px; box-shadow:0 1px 2px rgba(16,24,40,0.04),0 8px 20px rgba(16,24,40,0.05);">
+                  <sc-if value="{{ opt.isEditing }}" hint-placeholder-val="{{ false }}">
+                    <input value="{{ opt.editText }}" onChange="{{ opt.onEditChange }}" onKeyDown="{{ opt.onEditKeyDown }}" style="flex:1; height:36px; border-radius:10px; border:1px solid #E4E5E9; padding:0 10px; font-size:14px; outline:none;" />
+                    <div onClick="{{ opt.onSaveEdit }}" style="width:32px; height:32px; border-radius:10px; background:#EAF4EC; color:#1E7A46; display:flex; align-items:center; justify-content:center; font-size:15px; cursor:pointer; flex-shrink:0;">✓</div>
+                  </sc-if>
+                  <sc-if value="{{ opt.isNotEditing }}" hint-placeholder-val="{{ true }}">
+                    <div style="flex:1; font-size:14.5px; color:#1C1C1E; font-weight:500;">{{ opt.name }}</div>
+                    <div onClick="{{ opt.onEditStart }}" style="width:32px; height:32px; border-radius:10px; background:#EEF2FF; color:#1E3A8A; display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; flex-shrink:0;">✎</div>
+                  </sc-if>
+                  <div onClick="{{ opt.onDelete }}" style="width:32px; height:32px; border-radius:10px; background:#FFF1EE; color:#E0472C; display:flex; align-items:center; justify-content:center; font-size:15px; cursor:pointer; flex-shrink:0;">×</div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ noMealOptions }}" hint-placeholder-val="{{ false }}">
+                <div style="text-align:center; padding:30px 20px; color:#B0B5BE; font-size:13.5px;">Nenhuma opção cadastrada ainda.</div>
+              </sc-if>
+
+              <div style="display:flex; gap:8px; margin-top:8px;">
+                <input value="{{ newOptionText }}" onChange="{{ onNewOptionChange }}" onKeyDown="{{ onNewOptionKeyDown }}" placeholder="Nova opção (ex: Tapioca com queijo)" style="flex:1; height:46px; border-radius:14px; border:1px solid #E4E5E9; background:#fff; padding:0 16px; font-size:14px; outline:none;" />
+                <div onClick="{{ onAddMealOption }}" style="width:46px; height:46px; border-radius:14px; background:#1E3A8A; color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; flex-shrink:0;">+</div>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+
+        <!-- bottom tab bar -->
+        <div style="display:flex; border-top:1px solid #E7E8EB; background:rgba(255,255,255,0.92); padding:12px 12px;">
+          <div onClick="{{ onTabHome }}" style="flex:1; text-align:center; cursor:pointer;">
+            <div style="font-size:12.5px; font-weight:700; color:{{ homeTabColor }};">Hoje</div>
+          </div>
+          <div onClick="{{ onTabWorkouts }}" style="flex:1; text-align:center; cursor:pointer;">
+            <div style="font-size:12.5px; font-weight:700; color:{{ workoutsTabColor }};">Treinos</div>
+          </div>
+          <div onClick="{{ onTabMeals }}" style="flex:1; text-align:center; cursor:pointer;">
+            <div style="font-size:12.5px; font-weight:700; color:{{ mealsTabColor }};">Refeições</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- goals modal -->
+      <sc-if value="{{ showGoals }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ onCloseGoals }}" style="position:fixed; inset:0; background:rgba(20,22,30,0.45); z-index:80; display:flex; align-items:flex-end; justify-content:center;">
+          <div onClick="{{ stopProp }}" style="width:100%; max-width:560px; max-height:80vh; overflow:auto; background:#fff; border-radius:28px 28px 0 0; padding:22px 22px 34px;">
+            <div style="width:36px; height:4px; background:#E0E1E5; border-radius:2px; margin:0 auto 18px;"></div>
+            <div style="font-size:12px; font-weight:700; color:#FF6A2B; text-transform:uppercase; letter-spacing:0.4px;">{{ goalsProject }}</div>
+            <div style="font-size:13px; color:#9098A3; margin:8px 0 18px;">Jornada de 6 meses com metas mensais realistas.</div>
+
+            <sc-for list="{{ goalsTimelineVM }}" as="g" hint-placeholder-count="6">
+              <div style="padding:12px 0; border-bottom:1px solid #F1F2F4;">
+                <div style="font-size:14px; color:#1C1C1E; font-weight:600;">{{ g.month }}</div>
+                <div style="font-size:13px; color:#6B7280; margin-top:2px;">{{ g.foco }}</div>
+              </div>
+            </sc-for>
+
+            <div style="display:flex; gap:10px; margin-top:18px;">
+              <div style="flex:1; background:#EEF2FF; border-radius:16px; padding:14px;">
+                <div style="font-size:11px; color:#7C8BC7; font-weight:700; text-transform:uppercase;">Água / dia</div>
+                <div style="font-size:16px; color:#1E3A8A; font-weight:700; margin-top:3px;">{{ goalsWater }}</div>
+              </div>
+              <div style="flex:1; background:#FFEDE3; border-radius:16px; padding:14px;">
+                <div style="font-size:11px; color:#C97A45; font-weight:700; text-transform:uppercase;">Proteína / dia</div>
+                <div style="font-size:16px; color:#FF6A2B; font-weight:700; margin-top:3px;">{{ goalsProtein }}</div>
+              </div>
+            </div>
+
+            <div onClick="{{ onLogout }}" style="text-align:center; font-size:14px; color:#E0472C; font-weight:600; margin-top:24px; cursor:pointer;">Sair da conta</div>
+          </div>
+        </div>
+      </sc-if>
+    </sc-if>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 420, &quot;height&quot;: 900}, &quot;prefillUser&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;none&quot;, &quot;options&quot;: [&quot;none&quot;, &quot;monique&quot;, &quot;matheus&quot;], &quot;tsType&quot;: &quot;string&quot;}, &quot;previewDay&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;auto&quot;, &quot;options&quot;: [&quot;auto&quot;, &quot;Seg&quot;, &quot;Ter&quot;, &quot;Qua&quot;, &quot;Qui&quot;, &quot;Sex&quot;, &quot;Sáb&quot;, &quot;Dom&quot;], &quot;tsType&quot;: &quot;string&quot;}}">
+
+const DAY_LABELS = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+const DAY_LABELS_FULL = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+const MEAL_TYPE_LABELS = { cafe: 'Café da manhã', lancheManha: 'Lanche da manhã', lancheTarde: 'Lanche da tarde', jantar: 'Jantar' };
+
+function uid(prefix) { return prefix + '_' + Math.random().toString(36).slice(2, 8); }
+function getTodayIdx() { return (new Date().getDay() + 6) % 7; }
+
+function buildMoniqueData() {
+  const mealLibrary = {
+    cafe: [
+      { id: 'cafe1', name: 'Ovos mexidos + pão integral' },
+      { id: 'cafe2', name: 'Iogurte grego + aveia + frutas' },
+      { id: 'cafe3', name: 'Tapioca + queijo + peito de peru' },
+      { id: 'cafe4', name: 'Panqueca proteica de banana' },
+      { id: 'cafe5', name: 'Overnight oats' },
+      { id: 'cafe6', name: 'Crepioca + queijo' },
+      { id: 'cafe7', name: 'Omelete mediterrâneo' },
+    ],
+    lancheManha: [
+      { id: 'lm1', name: 'Banana + 10 castanhas' },
+      { id: 'lm2', name: '1 fruta da estação' },
+      { id: 'lm3', name: 'Mix de castanhas' },
+      { id: 'lm4', name: '1 maçã' },
+      { id: 'lm5', name: 'Smoothie verde' },
+      { id: 'lm6', name: 'Muffin de banana' },
+      { id: 'lm7', name: 'Frutas + granola' },
+    ],
+    lancheTarde: [
+      { id: 'lt1', name: 'Iogurte + morangos' },
+      { id: 'lt2', name: 'Banana + pasta de amendoim' },
+      { id: 'lt3', name: 'Iogurte + granola' },
+      { id: 'lt4', name: 'Torradas + ricota' },
+      { id: 'lt5', name: 'Fruta + 10 castanhas' },
+      { id: 'lt6', name: 'Fruta' },
+      { id: 'lt7', name: 'Iogurte + aveia' },
+    ],
+    jantar: [
+      { id: 'jt1', name: 'Omelete + salada verde' },
+      { id: 'jt2', name: 'Tilápia + abobrinha + arroz' },
+      { id: 'jt3', name: 'Wrap integral com frango' },
+      { id: 'jt4', name: 'Frango oriental + legumes' },
+      { id: 'jt5', name: 'Sopa de legumes com frango' },
+      { id: 'jt6', name: 'Refeição livre' },
+      { id: 'jt7', name: 'Sopa leve ou omelete' },
+    ],
+  };
+
+  const ex = (name, sets, reps, load, note) => ({ name, sets, reps, load: load || '', note: note || '' });
+
+  const workouts = {
+    wA: { id: 'wA', name: 'Inferiores A', subtitle: 'Pernas (Quadríceps)', day: 0, time: '07:00',
+      warmup: ['10 min bicicleta', 'Mobilidade de quadril — 8 rep cada lado', 'Ativação de glúteos com miniband — 20 rep'],
+      stretches: ['Alongamento Psoas — 30 seg cada', 'Alongamento Isquiotibiais — 30 seg cada', 'Rotação de Quadril — 8 rep cada'],
+      exercises: [
+        ex('Leg Press 45°', '4', '12', '', 'Não deixar a lombar arredondar'),
+        ex('Cadeira Extensora', '3', '15', '', 'Movimento controlado'),
+        ex('Afundo no Smith', '3', '12', '', 'Mais estável que barra livre'),
+        ex('Cadeira Abdutora', '4', '20', '', 'Foco no quadril e glúteo médio'),
+        ex('Panturrilha Sentada', '4', '20', '', 'Sobe e desce devagar'),
+      ],
+      core: ['Prancha — 3×30 seg', 'Bird Dog — 3×12 cada', 'Dead Bug — 3×12 cada'],
+      cardio: { modality: 'Esteira inclinada', duration: '20 min', extra: 'Velocidade confortável' },
+      notes: 'Amplitude parcial nos exercícios de joelho. Se sentir dor irradiando para a perna, interrompa e avise o professor.' },
+    wB: { id: 'wB', name: 'Superiores A', subtitle: 'Costas + Peito + Ombros', day: 1, time: '07:00',
+      warmup: ['5 min bicicleta', 'Rotação de ombros com elástico — 10 rep', 'Retração escapular — 10 rep'],
+      stretches: ['Alongamento peitoral na porta — 30 seg', 'Alongamento cervical leve — 20 seg cada', 'Rotação de ombros — 10 rep'],
+      exercises: [
+        ex('Pulldown (puxada frente)', '4', '12', '', 'Puxar até o queixo, coluna ereta'),
+        ex('Remada Máquina (apoio no peito)', '4', '12', '', 'Evita sobrecarregar a lombar'),
+        ex('Supino Máquina', '3', '12', '', 'Cotovelos levemente abaixo dos ombros'),
+        ex('Crucifixo Máquina', '3', '15', '', 'Abertura controlada'),
+        ex('Elevação Lateral', '3', '15', '', 'Sem balançar o corpo'),
+        ex('Tríceps Corda', '3', '15', '', 'Abrir pontas no final'),
+        ex('Rosca Scott Máquina', '3', '12', '', 'Cotovelo fixo, descida lenta'),
+      ],
+      core: [],
+      cardio: { modality: 'Bicicleta ergométrica', duration: '30 min', extra: '' },
+      notes: '' },
+    wRest: { id: 'wRest', name: 'Pilates', subtitle: 'Descanso Ativo', day: 2, time: '07:00',
+      warmup: [],
+      stretches: ['Gato/Vaca — 10 rep', 'Mobilidade de Tornozelo — 10 círculos cada', 'Alongamento global leve — 5 min'],
+      exercises: [],
+      core: [],
+      cardio: { modality: 'Caminhada leve (opcional)', duration: '30 min', extra: '' },
+      notes: 'Dia de recuperação — crucial para o resultado. Pilates a reagendar como aula semanal fixa.' },
+    wC: { id: 'wC', name: 'Inferiores B', subtitle: 'Posterior + Glúteos', day: 3, time: '07:00',
+      warmup: ['8 min elíptico', 'Ativação de glúteos com miniband — 15 rep cada', 'Mobilidade de quadril'],
+      stretches: ['Alongamento Isquiotibiais — 30 seg cada', 'Alongamento Piriforme — 30 seg cada', 'Rotação de Quadril — 8 rep cada'],
+      exercises: [
+        ex('Mesa Flexora', '4', '12', '', 'Contração máxima, descida controlada'),
+        ex('Cadeira Flexora', '3', '15', '', 'Sem arredondar a lombar'),
+        ex('Elevação Pélvica Máquina', '4', '12', '', 'Melhor que com barra livre'),
+        ex('Abdução Máquina', '4', '20', '', 'Foco no glúteo médio'),
+        ex('Glúteo Máquina (extensão)', '3', '15', '', 'Contração no topo, core ativado'),
+        ex('Panturrilha', '4', '20', '', 'Em pé ou sentada'),
+      ],
+      core: ['Prancha Lateral — 3×30 seg cada', 'Bird Dog — 3×12'],
+      cardio: { modality: 'Elíptico', duration: '20 min', extra: '' },
+      notes: '' },
+    wD: { id: 'wD', name: 'Superiores B', subtitle: 'Membros Superiores', day: 4, time: '07:00',
+      warmup: ['5 min bicicleta', 'Rotação de ombros'],
+      stretches: ['Alongamento peitoral — 30 seg', 'Alongamento tríceps — 30 seg cada', 'Rotação de ombros — 10 rep'],
+      exercises: [
+        ex('Puxada Frente', '4', '12', '', 'Variação da terça'),
+        ex('Remada Sentada', '4', '12', '', 'Coluna ereta'),
+        ex('Desenvolvimento Máquina', '3', '12', '', 'Cotovelos não descer abaixo de 90°'),
+        ex('Peck Deck', '3', '15', '', 'Leve flexão dos cotovelos'),
+        ex('Rosca Martelo', '3', '12', '', 'Alternado, cotovelo fixo'),
+        ex('Tríceps Máquina', '3', '15', '', 'Extensão completa'),
+        ex('Abdominal Máquina', '3', '15', '', 'Pouca carga, foco na contração'),
+      ],
+      core: [],
+      cardio: { modality: 'Bicicleta ou elíptico', duration: '30 min', extra: '' },
+      notes: '' },
+    wSab: { id: 'wSab', name: 'Cardio + Core', subtitle: 'Circuito de Sábado', day: 5, time: '09:30',
+      warmup: [],
+      stretches: ['Alongamentos gerais — 10 min'],
+      exercises: [],
+      core: ['Agachamento sem peso — 15 rep', 'Step baixo — 20 rep', 'Abdução com elástico — 20 rep', 'Prancha — 30 seg', 'Dead Bug — 15 rep'],
+      cardio: { modality: 'Caminhada ao ar livre', duration: '40 min', extra: '' },
+      notes: 'Circuito — repetir 3 voltas. Finalizar com 10 min de alongamentos.' },
+  };
+
+  const cafeSel = ['cafe1', 'cafe2', 'cafe3', 'cafe4', 'cafe5', 'cafe6', 'cafe7'];
+  const lmSel = ['lm1', 'lm2', 'lm3', 'lm4', 'lm5', 'lm6', 'lm7'];
+  const ltSel = ['lt1', 'lt2', 'lt3', 'lt4', 'lt5', 'lt6', 'lt7'];
+  const jtSel = ['jt1', 'jt2', 'jt3', 'jt4', 'jt5', 'jt6', 'jt7'];
+
+  const baseBlocks = [
+    [ { time: '06:15', type: 'plain', label: 'Acordar' }, { time: '06:30', type: 'meal', mealType: 'cafe' }, { time: '08:30', type: 'plain', label: 'Banho + preparo' }, { time: '09:00', type: 'plain', label: 'Trabalho' }, { time: '10:30', type: 'meal', mealType: 'lancheManha' }, { time: '12:00', type: 'lunch' }, { time: '15:30', type: 'meal', mealType: 'lancheTarde' }, { time: '18:00', type: 'plain', label: 'Saída' }, { time: '18:45', type: 'plain', label: 'Faculdade' }, { time: '22:15', type: 'meal', mealType: 'jantar' }, { time: '23:30', type: 'plain', label: 'Dormir' } ],
+    [ { time: '06:15', type: 'plain', label: 'Acordar' }, { time: '06:30', type: 'meal', mealType: 'cafe' }, { time: '08:40', type: 'plain', label: 'Banho' }, { time: '09:00', type: 'plain', label: 'Trabalho' }, { time: '10:30', type: 'meal', mealType: 'lancheManha' }, { time: '12:00', type: 'lunch' }, { time: '15:30', type: 'meal', mealType: 'lancheTarde' }, { time: '18:00', type: 'plain', label: 'Saída — noite livre' }, { time: '19:00', type: 'meal', mealType: 'jantar' }, { time: '23:00', type: 'plain', label: 'Dormir' } ],
+    [ { time: '06:45', type: 'meal', mealType: 'cafe' }, { time: '09:00', type: 'plain', label: 'Trabalho' }, { time: '10:30', type: 'meal', mealType: 'lancheManha' }, { time: '12:00', type: 'lunch' }, { time: '15:30', type: 'meal', mealType: 'lancheTarde' }, { time: '18:00', type: 'plain', label: 'Saída' }, { time: '18:45', type: 'plain', label: 'Faculdade' }, { time: '22:15', type: 'meal', mealType: 'jantar' }, { time: '23:30', type: 'plain', label: 'Dormir' } ],
+    [ { time: '06:15', type: 'plain', label: 'Acordar' }, { time: '06:30', type: 'meal', mealType: 'cafe' }, { time: '08:40', type: 'plain', label: 'Banho' }, { time: '09:00', type: 'plain', label: 'Trabalho' }, { time: '10:30', type: 'meal', mealType: 'lancheManha' }, { time: '12:00', type: 'lunch' }, { time: '15:30', type: 'meal', mealType: 'lancheTarde' }, { time: '18:00', type: 'plain', label: 'Saída' }, { time: '19:00', type: 'meal', mealType: 'jantar' }, { time: '20:00', type: 'plain', label: 'Terapia' }, { time: '21:30', type: 'plain', label: 'Descanso' }, { time: '23:00', type: 'plain', label: 'Dormir' } ],
+    [ { time: '06:15', type: 'plain', label: 'Acordar' }, { time: '06:30', type: 'meal', mealType: 'cafe' }, { time: '08:40', type: 'plain', label: 'Banho' }, { time: '09:00', type: 'plain', label: 'Trabalho' }, { time: '10:30', type: 'meal', mealType: 'lancheManha' }, { time: '12:00', type: 'lunch' }, { time: '15:30', type: 'meal', mealType: 'lancheTarde' }, { time: '18:00', type: 'plain', label: 'Saída — tempo livre' }, { time: '19:00', type: 'meal', mealType: 'jantar' }, { time: '23:30', type: 'plain', label: 'Dormir' } ],
+    [ { time: '07:30', type: 'plain', label: 'Acordar com calma' }, { time: '08:00', type: 'meal', mealType: 'cafe' }, { time: '11:00', type: 'plain', label: 'Pilates (a reagendar)' }, { time: '12:30', type: 'lunch' }, { time: '15:30', type: 'meal', mealType: 'lancheTarde' }, { time: '19:00', type: 'meal', mealType: 'jantar' } ],
+    [ { time: '08:30', type: 'meal', mealType: 'cafe' }, { time: '10:00', type: 'meal', mealType: 'lancheManha' }, { time: '12:30', type: 'lunch' }, { time: '15:30', type: 'meal', mealType: 'lancheTarde' }, { time: '16:30', type: 'plain', label: 'Lista de compras + autocuidado' }, { time: '19:00', type: 'meal', mealType: 'jantar' }, { time: '22:00', type: 'plain', label: 'Dormir bem' } ],
+  ];
+
+  const dayPlans = baseBlocks.map((blocks, i) => ({
+    blocks,
+    cafeSelected: cafeSel[i],
+    lancheManhaSelected: lmSel[i],
+    lancheTardeSelected: ltSel[i],
+    jantarSelected: jtSel[i],
+    almocoChecked: false,
+  }));
+
+  return {
+    name: 'Monique',
+    mealLibrary, workouts, dayPlans,
+    goals: {
+      project: 'Projeto Bem-estar',
+      timeline: [
+        { month: 'Julho', foco: 'Adaptar rotina, estabelecer hábitos' },
+        { month: 'Agosto', foco: 'Consolidar treinos, marmitas consistentes' },
+        { month: 'Setembro', foco: 'Aumentar cardio, progredir cargas' },
+        { month: 'Outubro', foco: 'Manter ritmo, avaliar medidas' },
+        { month: 'Novembro', foco: 'Intensificar, ajustes finos' },
+        { month: 'Dezembro', foco: 'Celebrar a consistência do ano!' },
+      ],
+      water: '2,5 – 3 L', protein: '120 – 140 g',
+    },
+  };
+}
+
+function buildMatheusData() {
+  return {
+    name: 'Matheus',
+    mealLibrary: { cafe: [], lancheManha: [], lancheTarde: [], jantar: [] },
+    workouts: {},
+    dayPlans: [0,1,2,3,4,5,6].map(() => ({ blocks: [], cafeSelected: null, lancheManhaSelected: null, lancheTardeSelected: null, jantarSelected: null, almocoChecked: false })),
+    goals: null,
+  };
+}
+
+class Component extends DCLogic {
+  state = {
+    view: 'login',
+    currentUser: null,
+    loginEmail: '',
+    loginError: '',
+    tab: 'home',
+    selectedDay: getTodayIdx(),
+    workoutsSubview: 'list',
+    activeWorkoutId: null,
+    editingWorkout: null,
+    editingIsNew: false,
+    activeMealType: 'cafe',
+    newOptionText: '',
+    editingMealOptionId: null,
+    editingMealOptionText: '',
+    showGoals: false,
+    completions: {},
+    users: { monique: buildMoniqueData(), matheus: buildMatheusData() },
+  };
+
+  componentDidMount() {
+    const pre = this.props.prefillUser;
+    const patch = {};
+    if (pre && pre !== 'none') { patch.view = 'app'; patch.currentUser = pre; }
+    const pd = this.props.previewDay;
+    if (pd && pd !== 'auto') {
+      const idx = DAY_LABELS.indexOf(pd);
+      if (idx >= 0) patch.selectedDay = idx;
+    }
+    if (Object.keys(patch).length) this.setState(patch);
+  }
+
+  setLoginEmail = (v) => this.setState({ loginEmail: v, loginError: '' });
+
+  login = () => {
+    const email = (this.state.loginEmail || '').trim().toLowerCase();
+    if (email === 'moniquebeck1996@gmail.com') this.setState({ view: 'app', currentUser: 'monique', loginError: '' });
+    else if (email === 'e.matheus.avila@gmail.com') this.setState({ view: 'app', currentUser: 'matheus', loginError: '' });
+    else this.setState({ loginError: 'E-mail não reconhecido. Tente novamente.' });
+  };
+
+  logout = () => this.setState({ view: 'login', currentUser: null, loginEmail: '', tab: 'home', workoutsSubview: 'list', showGoals: false });
+
+  setTab = (tab) => this.setState({ tab, workoutsSubview: 'list', activeWorkoutId: null, editingWorkout: null });
+  selectDay = (idx) => this.setState({ selectedDay: idx });
+
+  openGoals = () => this.setState({ showGoals: true });
+  closeGoals = () => this.setState({ showGoals: false });
+
+  selectMealOption = (mealType, optionId) => {
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const dayPlans = u.dayPlans.slice();
+      const dp = { ...dayPlans[s.selectedDay] };
+      dp[mealType + 'Selected'] = optionId;
+      dayPlans[s.selectedDay] = dp;
+      u.dayPlans = dayPlans;
+      users[s.currentUser] = u;
+      return { users };
+    });
+  };
+
+  toggleAlmoco = (dayIdx) => {
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const dayPlans = u.dayPlans.slice();
+      const dp = { ...dayPlans[dayIdx] };
+      dp.almocoChecked = !dp.almocoChecked;
+      dayPlans[dayIdx] = dp;
+      u.dayPlans = dayPlans;
+      users[s.currentUser] = u;
+      return { users };
+    });
+  };
+
+  updateBlockTime = (dayIdx, i, value) => {
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const dayPlans = u.dayPlans.slice();
+      const dp = { ...dayPlans[dayIdx] };
+      const blocks = dp.blocks.slice();
+      blocks[i] = { ...blocks[i], time: value };
+      dp.blocks = blocks;
+      dayPlans[dayIdx] = dp;
+      u.dayPlans = dayPlans;
+      users[s.currentUser] = u;
+      return { users };
+    });
+  };
+
+  addActivity = (dayIdx) => {
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const dayPlans = u.dayPlans.slice();
+      const dp = { ...dayPlans[dayIdx] };
+      dp.blocks = [...dp.blocks, { time: '12:00', type: 'plain', label: '' }];
+      dayPlans[dayIdx] = dp;
+      u.dayPlans = dayPlans;
+      users[s.currentUser] = u;
+      return { users };
+    });
+  };
+
+  updateBlockLabel = (dayIdx, i, value) => {
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const dayPlans = u.dayPlans.slice();
+      const dp = { ...dayPlans[dayIdx] };
+      const blocks = dp.blocks.slice();
+      blocks[i] = { ...blocks[i], label: value };
+      dp.blocks = blocks;
+      dayPlans[dayIdx] = dp;
+      u.dayPlans = dayPlans;
+      users[s.currentUser] = u;
+      return { users };
+    });
+  };
+
+  removePlainBlock = (dayIdx, i) => {
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const dayPlans = u.dayPlans.slice();
+      const dp = { ...dayPlans[dayIdx] };
+      dp.blocks = dp.blocks.filter((_, idx) => idx !== i);
+      dayPlans[dayIdx] = dp;
+      u.dayPlans = dayPlans;
+      users[s.currentUser] = u;
+      return { users };
+    });
+  };
+
+  updateWorkoutTime = (workoutId, value) => {
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const workouts = { ...u.workouts };
+      workouts[workoutId] = { ...workouts[workoutId], time: value };
+      u.workouts = workouts;
+      users[s.currentUser] = u;
+      return { users };
+    });
+  };
+
+  openWorkout = (id) => this.setState({ activeWorkoutId: id, workoutsSubview: 'detail' });
+  backToWorkoutList = () => this.setState({ workoutsSubview: 'list', activeWorkoutId: null });
+
+  blankDraft = () => ({ id: null, name: '', subtitle: '', day: '', time: '07:00', warmup: [], stretches: [], exercises: [{ name: '', sets: '', reps: '', load: '', note: '' }], core: [], cardio: { modality: '', duration: '', extra: '' }, notes: '' });
+
+  todayKey = () => new Date().toISOString().slice(0, 10);
+
+  isDone = (workoutId, section, idx) => {
+    const key = this.todayKey();
+    const c = this.state.completions;
+    return !!(c[key] && c[key][workoutId] && c[key][workoutId][section] && c[key][workoutId][section][idx]);
+  };
+
+  toggleDone = (workoutId, section, idx) => {
+    this.setState((s) => {
+      const key = this.todayKey();
+      const completions = { ...s.completions };
+      const forDate = { ...(completions[key] || {}) };
+      const forWorkout = { ...(forDate[workoutId] || {}) };
+      const forSection = { ...(forWorkout[section] || {}) };
+      forSection[idx] = !forSection[idx];
+      forWorkout[section] = forSection;
+      forDate[workoutId] = forWorkout;
+      completions[key] = forDate;
+      return { completions };
+    });
+  };
+
+  updateExerciseLoadQuick = (workoutId, idx, value) => {
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const workouts = { ...u.workouts };
+      const w = { ...workouts[workoutId] };
+      const exercises = w.exercises.slice();
+      exercises[idx] = { ...exercises[idx], load: value };
+      w.exercises = exercises;
+      workouts[workoutId] = w;
+      u.workouts = workouts;
+      users[s.currentUser] = u;
+      return { users };
+    });
+  };
+
+  startNewWorkout = () => this.setState({ editingWorkout: this.blankDraft(), editingIsNew: true, workoutsSubview: 'editor' });
+
+  editActiveWorkout = () => {
+    const u = this.state.users[this.state.currentUser];
+    const w = u.workouts[this.state.activeWorkoutId];
+    const draft = JSON.parse(JSON.stringify(w));
+    draft.day = draft.day === null || draft.day === undefined ? '' : String(draft.day);
+    this.setState({ editingWorkout: draft, editingIsNew: false, workoutsSubview: 'editor' });
+  };
+
+  startEditWorkoutFromList = (id) => {
+    const u = this.state.users[this.state.currentUser];
+    const w = u.workouts[id];
+    const draft = JSON.parse(JSON.stringify(w));
+    draft.day = draft.day === null || draft.day === undefined ? '' : String(draft.day);
+    this.setState({ activeWorkoutId: id, editingWorkout: draft, editingIsNew: false, workoutsSubview: 'editor' });
+  };
+
+  deleteWorkoutFromList = (id) => {
+    if (!window.confirm('Excluir este treino?')) return;
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const workouts = { ...u.workouts };
+      delete workouts[id];
+      u.workouts = workouts;
+      users[s.currentUser] = u;
+      return { users };
+    });
+  };
+
+  cancelEdit = () => this.setState({ workoutsSubview: this.state.editingIsNew ? 'list' : 'detail', editingWorkout: null });
+
+  updDraft = (field, value) => this.setState((s) => ({ editingWorkout: { ...s.editingWorkout, [field]: value } }));
+  updCardio = (field, value) => this.setState((s) => ({ editingWorkout: { ...s.editingWorkout, cardio: { ...s.editingWorkout.cardio, [field]: value } } }));
+  updListItem = (listName, idx, value) => this.setState((s) => { const list = s.editingWorkout[listName].slice(); list[idx] = value; return { editingWorkout: { ...s.editingWorkout, [listName]: list } }; });
+  addListItem = (listName) => this.setState((s) => ({ editingWorkout: { ...s.editingWorkout, [listName]: [...s.editingWorkout[listName], ''] } }));
+  removeListItem = (listName, idx) => this.setState((s) => ({ editingWorkout: { ...s.editingWorkout, [listName]: s.editingWorkout[listName].filter((_, i) => i !== idx) } }));
+  updExercise = (idx, field, value) => this.setState((s) => { const exs = s.editingWorkout.exercises.slice(); exs[idx] = { ...exs[idx], [field]: value }; return { editingWorkout: { ...s.editingWorkout, exercises: exs } }; });
+  addExercise = () => this.setState((s) => ({ editingWorkout: { ...s.editingWorkout, exercises: [...s.editingWorkout.exercises, { name: '', sets: '', reps: '', load: '', note: '' }] } }));
+  removeExercise = (idx) => this.setState((s) => ({ editingWorkout: { ...s.editingWorkout, exercises: s.editingWorkout.exercises.filter((_, i) => i !== idx) } }));
+
+  saveWorkout = () => {
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const workouts = { ...u.workouts };
+      const d = s.editingWorkout;
+      const id = d.id || uid('w');
+      workouts[id] = {
+        id, name: d.name.trim() || 'Treino sem nome', subtitle: d.subtitle.trim(),
+        day: d.day === '' ? null : parseInt(d.day, 10), time: d.time || '07:00',
+        warmup: d.warmup.filter((x) => x && x.trim()),
+        stretches: d.stretches.filter((x) => x && x.trim()),
+        core: d.core.filter((x) => x && x.trim()),
+        exercises: d.exercises.filter((e) => e.name && e.name.trim()),
+        cardio: d.cardio, notes: d.notes,
+      };
+      u.workouts = workouts;
+      users[s.currentUser] = u;
+      return { users, workoutsSubview: 'detail', activeWorkoutId: id, editingWorkout: null };
+    });
+  };
+
+  deleteActiveWorkout = () => {
+    if (!window.confirm('Excluir este treino?')) return;
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const workouts = { ...u.workouts };
+      delete workouts[s.activeWorkoutId];
+      u.workouts = workouts;
+      users[s.currentUser] = u;
+      return { users, workoutsSubview: 'list', activeWorkoutId: null };
+    });
+  };
+
+  setActiveMealType = (t) => this.setState({ activeMealType: t, newOptionText: '', editingMealOptionId: null });
+  setNewOptionText = (v) => this.setState({ newOptionText: v });
+
+  addMealOption = () => {
+    const text = (this.state.newOptionText || '').trim();
+    if (!text) return;
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const lib = { ...u.mealLibrary };
+      lib[s.activeMealType] = [...lib[s.activeMealType], { id: uid('m'), name: text }];
+      u.mealLibrary = lib;
+      users[s.currentUser] = u;
+      return { users, newOptionText: '' };
+    });
+  };
+
+  deleteMealOption = (mealType, id) => {
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const lib = { ...u.mealLibrary };
+      lib[mealType] = lib[mealType].filter((o) => o.id !== id);
+      u.mealLibrary = lib;
+      users[s.currentUser] = u;
+      return { users };
+    });
+  };
+
+  startEditMealOption = (id, text) => this.setState({ editingMealOptionId: id, editingMealOptionText: text });
+  changeEditMealOptionText = (v) => this.setState({ editingMealOptionText: v });
+  cancelEditMealOption = () => this.setState({ editingMealOptionId: null, editingMealOptionText: '' });
+
+  saveEditMealOption = () => {
+    const text = (this.state.editingMealOptionText || '').trim();
+    if (!text) { this.cancelEditMealOption(); return; }
+    this.setState((s) => {
+      const users = { ...s.users };
+      const u = { ...users[s.currentUser] };
+      const lib = { ...u.mealLibrary };
+      lib[s.activeMealType] = lib[s.activeMealType].map((o) => (o.id === s.editingMealOptionId ? { ...o, name: text } : o));
+      u.mealLibrary = lib;
+      users[s.currentUser] = u;
+      return { users, editingMealOptionId: null, editingMealOptionText: '' };
+    });
+  };
+
+  renderVals() {
+    const s = this.state;
+    const isLogin = s.view === 'login';
+    const isApp = s.view === 'app';
+    const u = isApp ? s.users[s.currentUser] : null;
+
+    const vals = {
+      isLogin, isApp,
+      loginEmail: s.loginEmail,
+      hasLoginError: !!s.loginError,
+      loginError: s.loginError,
+      onEmailChange: (e) => this.setLoginEmail(e.target.value),
+      onEmailKeyDown: (e) => { if (e.key === 'Enter') this.login(); },
+      onLoginClick: () => this.login(),
+    };
+
+    if (!isApp) return vals;
+
+    vals.greeting = 'Olá, ' + u.name + ' 👋';
+    vals.todayLabel = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+    vals.avatarLetter = u.name.charAt(0);
+    vals.onAvatarClick = () => this.logout();
+
+    vals.tabIsHome = s.tab === 'home';
+    vals.tabIsWorkouts = s.tab === 'workouts';
+    vals.tabIsMeals = s.tab === 'meals';
+    vals.onTabHome = () => this.setTab('home');
+    vals.onTabWorkouts = () => this.setTab('workouts');
+    vals.onTabMeals = () => this.setTab('meals');
+    vals.homeTabColor = s.tab === 'home' ? '#1E3A8A' : '#B0B5BE';
+    vals.workoutsTabColor = s.tab === 'workouts' ? '#1E3A8A' : '#B0B5BE';
+    vals.mealsTabColor = s.tab === 'meals' ? '#1E3A8A' : '#B0B5BE';
+
+    const today = new Date();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - getTodayIdx());
+    vals.weekDaysVM = DAY_LABELS.map((label, i) => {
+      const d = new Date(monday); d.setDate(monday.getDate() + i);
+      const selected = i === s.selectedDay;
+      return {
+        label, dateNum: d.getDate(),
+        wrapBg: selected ? '#EEF2FF' : 'transparent',
+        labelColor: selected ? '#1E3A8A' : '#B0B5BE',
+        circleBg: selected ? '#FF6A2B' : '#F0F1F3',
+        circleColor: selected ? '#fff' : '#5B6068',
+        onClick: () => this.selectDay(i),
+      };
+    });
+
+    vals.hasGoals = !!u.goals;
+    if (u.goals) {
+      vals.goalsProject = u.goals.project;
+      vals.goalsWater = u.goals.water;
+      vals.goalsProtein = u.goals.protein;
+      vals.goalsTimelineVM = u.goals.timeline;
+    }
+    vals.showGoals = s.showGoals;
+    vals.onOpenGoals = () => this.openGoals();
+    vals.onCloseGoals = () => this.closeGoals();
+    vals.stopProp = (e) => e.stopPropagation();
+    vals.onLogout = () => this.logout();
+
+    const dayIdx = s.selectedDay;
+    const dp = u.dayPlans[dayIdx];
+    const workoutBlocks = Object.values(u.workouts).filter((w) => w.day === dayIdx).map((w) => ({ time: w.time, type: 'workout', workoutId: w.id }));
+    const plainBlocks = dp.blocks.map((b, i) => ({ ...b, _i: i }));
+    const merged = [...plainBlocks, ...workoutBlocks].sort((a, b) => a.time.localeCompare(b.time));
+
+    vals.dayBlocksVM = merged.map((b) => {
+      if (b.type === 'plain') {
+        return { isPlain: true, isMeal: false, isLunch: false, isWorkout: false, time: b.time, label: b.label,
+          onTimeChange: (e) => this.updateBlockTime(dayIdx, b._i, e.target.value),
+          onLabelChange: (e) => this.updateBlockLabel(dayIdx, b._i, e.target.value),
+          onRemove: () => this.removePlainBlock(dayIdx, b._i) };
+      }
+      if (b.type === 'meal') {
+        const lib = u.mealLibrary[b.mealType] || [];
+        const selectedId = dp[b.mealType + 'Selected'];
+        return {
+          isPlain: false, isMeal: true, isLunch: false, isWorkout: false,
+          time: b.time, mealLabel: MEAL_TYPE_LABELS[b.mealType],
+          onTimeChange: (e) => this.updateBlockTime(dayIdx, b._i, e.target.value),
+          hasOptions: lib.length > 0, noOptions: lib.length === 0,
+          options: lib.map((opt) => {
+            const sel = opt.id === selectedId;
+            return {
+              name: opt.name,
+              ringColor: sel ? '#FF6A2B' : '#D7D9DE',
+              fillColor: sel ? '#FF6A2B' : '#fff',
+              textColor: sel ? '#1C1C1E' : '#6B7280',
+              textWeight: sel ? '600' : '400',
+              onSelect: () => this.selectMealOption(b.mealType, opt.id),
+            };
+          }),
+        };
+      }
+      if (b.type === 'lunch') {
+        const checked = !!dp.almocoChecked;
+        return {
+          isPlain: false, isMeal: false, isLunch: true, isWorkout: false, time: b.time,
+          onTimeChange: (e) => this.updateBlockTime(dayIdx, b._i, e.target.value),
+          onToggle: () => this.toggleAlmoco(dayIdx),
+          ringColor: checked ? '#FF6A2B' : '#D7D9DE', fillColor: checked ? '#FF6A2B' : '#fff', checkMark: checked ? '✓' : '',
+        };
+      }
+      if (b.type === 'workout') {
+        const w = u.workouts[b.workoutId];
+        return { isPlain: false, isMeal: false, isLunch: false, isWorkout: true, time: b.time, name: w.name, subtitle: w.subtitle, initial: w.name.charAt(0), onOpen: () => this.openWorkout(w.id), onTimeChange: (e) => this.updateWorkoutTime(w.id, e.target.value) };
+      }
+      return { isPlain: true, isMeal: false, isLunch: false, isWorkout: false, time: b.time, label: '', onTimeChange: () => {} };
+    });
+    vals.dayHasNoBlocks = merged.length === 0;
+    vals.onAddActivity = () => this.addActivity(dayIdx);
+
+    vals.wSubIsList = s.workoutsSubview === 'list';
+    vals.wSubIsDetail = s.workoutsSubview === 'detail';
+    vals.wSubIsEditor = s.workoutsSubview === 'editor';
+    vals.onNewWorkout = () => this.startNewWorkout();
+
+    const workoutList = Object.values(u.workouts).sort((a, b) => (a.day === null ? 99 : a.day) - (b.day === null ? 99 : b.day));
+    vals.workoutsVM = workoutList.map((w) => ({
+      initial: w.name.charAt(0),
+      name: w.name, subtitle: w.subtitle,
+      dayLabel: w.day === null ? 'Sem dia definido' : DAY_LABELS_FULL[w.day] + ' · ' + w.time,
+      onOpen: () => this.openWorkout(w.id),
+      onDelete: () => this.deleteWorkoutFromList(w.id),
+    }));
+    vals.noWorkouts = workoutList.length === 0;
+
+    if (s.activeWorkoutId && u.workouts[s.activeWorkoutId]) {
+      const w = u.workouts[s.activeWorkoutId];
+      const wid = w.id;
+      const stretchesArr = w.stretches || [];
+      const stretchItems = stretchesArr.map((label, idx) => ({
+        idx, label, done: this.isDone(wid, 'stretches', idx),
+        photoId: 'stretch-photo-' + wid + '-' + idx,
+        onToggle: () => this.toggleDone(wid, 'stretches', idx),
+      }));
+      const coreItems = (w.core || []).map((label, idx) => ({
+        idx, label, photoId: 'core-photo-' + wid + '-' + idx,
+      }));
+      const exerciseItems = w.exercises.map((e, idx) => ({
+        idx, name: e.name, setsReps: e.sets + '×' + e.reps,
+        load: e.load, hasNote: !!e.note, note: e.note,
+        photoId: 'ex-photo-' + wid + '-' + idx,
+        done: this.isDone(wid, 'exercises', idx),
+        onToggle: () => this.toggleDone(wid, 'exercises', idx),
+        onLoadChange: (ev) => this.updateExerciseLoadQuick(wid, idx, ev.target.value),
+      }));
+      vals.activeWorkout = {
+        name: w.name, subtitle: w.subtitle,
+        dayTimeLabel: (w.day === null ? 'Sem dia definido' : DAY_LABELS_FULL[w.day]) + ' · ' + w.time,
+        hasWarmup: w.warmup.length > 0, warmup: w.warmup,
+        hasStretches: stretchItems.length > 0,
+        stretchesTodo: stretchItems.filter((it) => !it.done),
+        stretchesDone: stretchItems.filter((it) => it.done),
+        hasStretchesDone: stretchItems.some((it) => it.done),
+        hasExercises: exerciseItems.length > 0,
+        exercisesTodo: exerciseItems.filter((it) => !it.done),
+        exercisesDone: exerciseItems.filter((it) => it.done),
+        hasExercisesDone: exerciseItems.some((it) => it.done),
+        hasCore: w.core.length > 0, core: w.core, coreItems: coreItems,
+        hasCardio: !!(w.cardio && (w.cardio.modality || w.cardio.duration)),
+        cardioModality: w.cardio ? w.cardio.modality : '',
+        cardioDetail: w.cardio ? [w.cardio.duration, w.cardio.extra].filter(Boolean).join(' · ') : '',
+        hasNotes: !!w.notes, notes: w.notes,
+      };
+    }
+    vals.onBackToWorkoutList = () => this.backToWorkoutList();
+    vals.onEditActiveWorkout = () => this.editActiveWorkout();
+    vals.onDeleteActiveWorkout = () => this.deleteActiveWorkout();
+
+    if (s.editingWorkout) {
+      const d = s.editingWorkout;
+      vals.editorTitle = s.editingIsNew ? 'Novo treino' : 'Editar treino';
+      vals.draftName = d.name;
+      vals.draftSubtitle = d.subtitle;
+      vals.draftDay = d.day;
+      vals.draftTime = d.time;
+      vals.draftCardioModality = d.cardio.modality;
+      vals.draftCardioDuration = d.cardio.duration;
+      vals.draftCardioExtra = d.cardio.extra;
+      vals.draftNotes = d.notes;
+      vals.onDraftNameChange = (e) => this.updDraft('name', e.target.value);
+      vals.onDraftSubtitleChange = (e) => this.updDraft('subtitle', e.target.value);
+      vals.onDraftDayChange = (e) => this.updDraft('day', e.target.value);
+      vals.onDraftTimeChange = (e) => this.updDraft('time', e.target.value);
+      vals.onCardioModalityChange = (e) => this.updCardio('modality', e.target.value);
+      vals.onCardioDurationChange = (e) => this.updCardio('duration', e.target.value);
+      vals.onCardioExtraChange = (e) => this.updCardio('extra', e.target.value);
+      vals.onNotesChange = (e) => this.updDraft('notes', e.target.value);
+      vals.dayOptionsVM = [{ value: '', label: 'Sem dia definido' }, ...DAY_LABELS_FULL.map((l, i) => ({ value: String(i), label: l }))];
+
+      vals.warmupVM = d.warmup.map((val, idx) => ({ val, onChange: (e) => this.updListItem('warmup', idx, e.target.value), onRemove: () => this.removeListItem('warmup', idx) }));
+      vals.stretchesVM = d.stretches.map((val, idx) => ({ val, onChange: (e) => this.updListItem('stretches', idx, e.target.value), onRemove: () => this.removeListItem('stretches', idx) }));
+      vals.coreVM = d.core.map((val, idx) => ({ val, onChange: (e) => this.updListItem('core', idx, e.target.value), onRemove: () => this.removeListItem('core', idx) }));
+      vals.exercisesVM = d.exercises.map((e2, idx) => ({
+        name: e2.name, sets: e2.sets, reps: e2.reps, load: e2.load, note: e2.note,
+        onName: (ev) => this.updExercise(idx, 'name', ev.target.value),
+        onSets: (ev) => this.updExercise(idx, 'sets', ev.target.value),
+        onReps: (ev) => this.updExercise(idx, 'reps', ev.target.value),
+        onLoad: (ev) => this.updExercise(idx, 'load', ev.target.value),
+        onNote: (ev) => this.updExercise(idx, 'note', ev.target.value),
+        onRemove: () => this.removeExercise(idx),
+      }));
+      vals.onAddWarmup = () => this.addListItem('warmup');
+      vals.onAddStretch = () => this.addListItem('stretches');
+      vals.onAddCore = () => this.addListItem('core');
+      vals.onAddExercise = () => this.addExercise();
+      vals.onSaveWorkout = () => this.saveWorkout();
+      vals.onCancelEdit = () => this.cancelEdit();
+    }
+
+    const mealTypes = [['cafe', 'Café'], ['lancheManha', 'Lanche manhã'], ['lancheTarde', 'Lanche tarde'], ['jantar', 'Jantar']];
+    vals.mealTypeTabsVM = mealTypes.map(([key, label]) => ({
+      label, bg: s.activeMealType === key ? '#fff' : 'transparent', color: s.activeMealType === key ? '#1E3A8A' : '#8A8F98',
+      onClick: () => this.setActiveMealType(key),
+    }));
+    const lib = u.mealLibrary[s.activeMealType] || [];
+    vals.mealOptionsVM = lib.map((opt) => {
+      const editing = opt.id === s.editingMealOptionId;
+      return {
+        name: opt.name,
+        isEditing: editing, isNotEditing: !editing,
+        editText: editing ? s.editingMealOptionText : '',
+        onEditChange: (e) => this.changeEditMealOptionText(e.target.value),
+        onEditKeyDown: (e) => { if (e.key === 'Enter') this.saveEditMealOption(); },
+        onSaveEdit: () => this.saveEditMealOption(),
+        onEditStart: () => this.startEditMealOption(opt.id, opt.name),
+        onDelete: () => this.deleteMealOption(s.activeMealType, opt.id),
+      };
+    });
+    vals.noMealOptions = lib.length === 0;
+    vals.newOptionText = s.newOptionText;
+    vals.onNewOptionChange = (e) => this.setNewOptionText(e.target.value);
+    vals.onNewOptionKeyDown = (e) => { if (e.key === 'Enter') this.addMealOption(); };
+    vals.onAddMealOption = () => this.addMealOption();
+
+    return vals;
+  }
+}
+
+</script>
+</body>
+</html>
