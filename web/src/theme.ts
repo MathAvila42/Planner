@@ -1,0 +1,35 @@
+export const COLORS = {
+  bgOuter: '#EAECEF',
+  bgApp: '#F5F6F8',
+  white: '#FFFFFF',
+  navy: '#1E3A8A',
+  navyLight: '#EEF2FF',
+  navyLightText: '#7C8BC7',
+  orange: '#FF6A2B',
+  orangeLight: '#FFEDE3',
+  orangeLightText: '#C97A45',
+  textPrimary: '#1C1C1E',
+  textSecondary: '#9098A3',
+  textTertiary: '#B0B5BE',
+  textMuted: '#8A8F98',
+  textFaint: '#B7BBC2',
+  border: '#E4E5E9',
+  borderLight: '#F1F2F4',
+  borderDashed: '#D7D9DE',
+  ringInactive: '#D7D9DE',
+  danger: '#E0472C',
+  dangerBg: '#FFF1EE',
+  success: '#1E7A46',
+  successBg: '#EAF4EC',
+  divider: '#E7E8EB',
+  chevron: '#C6CAD2',
+  notesBg: '#FFF7ED',
+  notesText: '#8A5A2E',
+  bodyText: '#33363B',
+  optionInactiveText: '#6B7280',
+  timelineFoco: '#6B7280',
+} as const;
+
+export const SHADOW_CARD = '0 1px 2px rgba(16,24,40,0.04), 0 8px 20px rgba(16,24,40,0.05)';
+
+export const FONT_FAMILY = "-apple-system, 'SF Pro Text', system-ui, sans-serif";

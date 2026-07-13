@@ -1,25 +1,39 @@
-# CODING AGENTS: READ THIS FIRST
+# Rotina & Bem-estar
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+App pessoal de rotina, alimentação e treinos para dois usuários (Monique e Matheus), implementado a partir do design em `design/project/App de Rotina.dc.html` (ver `design/README.md` e `design/chats/chat1.md` para o histórico completo dos requisitos).
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+- **Frontend**: React + Vite + TypeScript, mobile-first (sem chrome de dispositivo, responsivo até tablet).
+- **Backend**: Express + SQLite (`better-sqlite3`), com sessão via cookie assinado (JWT httpOnly). Cada usuário só acessa seus próprios dados.
+- **Fotos** de exercícios/alongamentos/core: upload salvo em `server/uploads/`, servido em `/uploads/...`.
 
-## What you should do — IMPORTANT
+## Setup
 
-**Read the chat transcripts first.** There are 1 chat transcript(s) in `chats/`. The transcripts show the full back-and-forth between the user and the design assistant — they tell you **what the user actually wants** and **where they landed** after iterating. Don't skip them. The final HTML files are the output, but the chat is where the intent lives.
+```bash
+npm install                     # instala as duas apps (workspaces)
+npm run seed --workspace=server # popula o banco: Monique com o planner completo, Matheus em branco
+```
 
-**Read `project/App de Rotina.dc.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+## Rodando em desenvolvimento
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+Em dois terminais:
 
-## About the design files
+```bash
+npm run dev:server   # API em http://localhost:4000
+npm run dev:web      # app em http://localhost:5173 (proxy para a API)
+```
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
+Login com um dos e-mails cadastrados:
+- `moniquebeck1996@gmail.com`
+- `e.matheus.avila@gmail.com`
 
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
+## Build de produção
 
-## Bundle contents
+```bash
+npm run build:web
+npm run build --workspace=server
+npm start --workspace=server   # serve a API e os arquivos estáticos do web/dist na mesma porta
+```
 
-- `README.md` — this file
-- `chats/` — conversation transcripts (read these!)
-- `project/` — the `App de Rotina, Alimentação e Treinos` project files (HTML prototypes, assets, components)
+## Resetar os dados
+
+Apague `server/data/app.sqlite*` e rode `npm run seed --workspace=server` novamente.

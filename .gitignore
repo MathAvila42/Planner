@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.env
+*.log
+*.tsbuildinfo
+
+# runtime data
+server/data/*
+!server/data/.gitkeep
+server/uploads/*
+!server/uploads/.gitkeep
