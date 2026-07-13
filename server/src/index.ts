@@ -1,38 +1,13 @@
-import 'dotenv/config';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
-import { authRouter } from './routes/auth.js';
-import { mealsRouter } from './routes/meals.js';
-import { workoutsRouter } from './routes/workouts.js';
-import { dayPlanRouter } from './routes/dayPlan.js';
-import { goalsRouter } from './routes/goals.js';
-import { completionsRouter } from './routes/completions.js';
-import { uploadsRouter } from './routes/uploads.js';
+import { app } from './app.js';
 
+// Local-only: serves the built web/dist next to the API on one port, for
+// `npm run build:web && npm run build --workspace=server && npm start --workspace=server`.
+// On Vercel the frontend is served as static output directly, not through Express.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const app = express();
-
-app.use(cors({ origin: true, credentials: true }));
-app.use(cookieParser());
-app.use(express.json({ limit: '2mb' }));
-
-app.use('/api/auth', authRouter);
-app.use('/api/meals', mealsRouter);
-app.use('/api/workouts', workoutsRouter);
-app.use('/api/day-plan', dayPlanRouter);
-app.use('/api/goals', goalsRouter);
-app.use('/api/completions', completionsRouter);
-app.use('/api/uploads', uploadsRouter);
-
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error(err);
-  res.status(err?.status || 500).json({ error: err?.message || 'Erro interno do servidor.' });
-});
-
 const webDist = path.join(__dirname, '..', '..', 'web', 'dist');
 if (fs.existsSync(webDist)) {
   app.use(express.static(webDist));
