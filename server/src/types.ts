@@ -58,6 +58,7 @@ export interface DayBlock {
   type: BlockType;
   label: string;
   mealType: MealType | null;
+  notes: string;
 }
 
 export interface DaySelections {

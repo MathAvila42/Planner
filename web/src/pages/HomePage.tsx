@@ -218,17 +218,24 @@ function PlainBlockRow({ block, onTimeChange, onLabelChange, onRemove }: {
   block: DayBlock; onTimeChange: (id: string, v: string) => void; onLabelChange: (id: string, v: string) => void; onRemove: (id: string) => void;
 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px' }}>
-      <TimeInput value={block.time} onChange={(v) => onTimeChange(block.id, v)} />
-      <input
-        value={block.label}
-        onChange={(e) => onLabelChange(block.id, e.target.value)}
-        placeholder="Nome da atividade"
-        style={{ flex: 1, border: 'none', background: 'transparent', fontSize: 14, color: COLORS.textSecondary, padding: '2px 0', outline: 'none' }}
-      />
-      <div onClick={() => onRemove(block.id)} style={{ width: 24, height: 24, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: COLORS.borderDashed, cursor: 'pointer', flexShrink: 0 }}>
-        ×
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px' }}>
+        <TimeInput value={block.time} onChange={(v) => onTimeChange(block.id, v)} />
+        <input
+          value={block.label}
+          onChange={(e) => onLabelChange(block.id, e.target.value)}
+          placeholder="Nome da atividade"
+          style={{ flex: 1, border: 'none', background: 'transparent', fontSize: 14, color: COLORS.textSecondary, padding: '2px 0', outline: 'none' }}
+        />
+        <div onClick={() => onRemove(block.id)} style={{ width: 24, height: 24, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: COLORS.borderDashed, cursor: 'pointer', flexShrink: 0 }}>
+          ×
+        </div>
       </div>
+      {block.notes && (
+        <div style={{ marginLeft: 84, marginRight: 4, marginTop: 4, background: COLORS.notesBg, borderRadius: 14, padding: '12px 14px', fontSize: 12.5, color: COLORS.notesText, lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+          {block.notes}
+        </div>
+      )}
     </div>
   );
 }

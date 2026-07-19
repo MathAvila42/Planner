@@ -75,6 +75,7 @@ create table if not exists day_blocks (
   type text not null check (type in ('plain','meal','lunch')),
   label text not null default '',
   meal_type text,
+  notes text not null default '',
   sort_order integer not null default 0
 );
 

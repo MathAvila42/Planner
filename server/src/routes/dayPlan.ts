@@ -19,11 +19,11 @@ dayPlanRouter.get('/:dow/blocks', wrap<AuthedRequest>(async (req, res) => {
   const dow = Number(req.params.dow);
   const { data, error } = await supabase
     .from('day_blocks')
-    .select('id, time, type, label, meal_type')
+    .select('id, time, type, label, meal_type, notes')
     .eq('user_id', req.userId).eq('day_of_week', dow)
     .order('time', { ascending: true });
   if (error) throw error;
-  res.json((data || []).map((r) => ({ id: r.id, time: r.time, type: r.type, label: r.label, mealType: r.meal_type })));
+  res.json((data || []).map((r) => ({ id: r.id, time: r.time, type: r.type, label: r.label, mealType: r.meal_type, notes: r.notes || '' })));
 }));
 
 dayPlanRouter.post('/:dow/blocks', wrap<AuthedRequest>(async (req, res) => {
@@ -35,13 +35,14 @@ dayPlanRouter.post('/:dow/blocks', wrap<AuthedRequest>(async (req, res) => {
     id, user_id: req.userId, day_of_week: dow, time, type: 'plain', label, meal_type: null,
   });
   if (error) throw error;
-  res.json({ id, time, type: 'plain' as BlockType, label, mealType: null });
+  res.json({ id, time, type: 'plain' as BlockType, label, mealType: null, notes: '' });
 }));
 
 dayPlanRouter.patch('/blocks/:id', wrap<AuthedRequest>(async (req, res) => {
   const patch: Record<string, string> = {};
   if (req.body?.time !== undefined) patch.time = String(req.body.time);
   if (req.body?.label !== undefined) patch.label = String(req.body.label);
+  if (req.body?.notes !== undefined) patch.notes = String(req.body.notes);
 
   const { data, error } = await supabase
     .from('day_blocks').update(patch)
