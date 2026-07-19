@@ -26,6 +26,17 @@ function selectionPatchFor(mealType: MealType, optionId: string): Partial<DaySel
   }
 }
 
+// A plain activity label like "Skincare: Poliglutâmico → Cetaphil → CeraVe" renders as a
+// card with a title and an icon list of steps, matching the meal-option cards, instead of
+// the plain single-line row.
+function parseStepsLabel(label: string): { title: string; steps: string[] } | null {
+  const sepIdx = label.indexOf(': ');
+  if (sepIdx === -1) return null;
+  const steps = label.slice(sepIdx + 2).split(' → ').map((s) => s.trim()).filter(Boolean);
+  if (steps.length < 2) return null;
+  return { title: label.slice(0, sepIdx), steps };
+}
+
 export default function HomePage({
   user, onOpenWorkout, onOpenGoals, onLogout,
 }: {
@@ -155,7 +166,10 @@ export default function HomePage({
       <div style={{ padding: '0 20px' }}>
         {merged.map((item, idx) => (
           <div key={idx} style={{ marginBottom: 12 }}>
-            {item.kind === 'block' && item.block.type === 'plain' && (
+            {item.kind === 'block' && item.block.type === 'plain' && parseStepsLabel(item.block.label) && (
+              <StepsBlockRow block={item.block} parsed={parseStepsLabel(item.block.label)!} onTimeChange={updateBlockTime} onRemove={removeBlock} />
+            )}
+            {item.kind === 'block' && item.block.type === 'plain' && !parseStepsLabel(item.block.label) && (
               <PlainBlockRow block={item.block} onTimeChange={updateBlockTime} onLabelChange={updateBlockLabel} onRemove={removeBlock} />
             )}
             {item.kind === 'block' && item.block.type === 'meal' && (
@@ -236,6 +250,37 @@ function PlainBlockRow({ block, onTimeChange, onLabelChange, onRemove }: {
           {block.notes}
         </div>
       )}
+    </div>
+  );
+}
+
+function StepsBlockRow({ block, parsed, onTimeChange, onRemove }: {
+  block: DayBlock; parsed: { title: string; steps: string[] };
+  onTimeChange: (id: string, v: string) => void; onRemove: (id: string) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 12 }}>
+      <TimeInput value={block.time} onChange={(v) => onTimeChange(block.id, v)} style={{ marginTop: 16, height: 20 }} />
+      <div style={{ flex: 1, background: '#fff', borderRadius: 20, padding: '16px 18px', boxShadow: SHADOW_CARD, position: 'relative' }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 10 }}>{parsed.title}</div>
+        {parsed.steps.map((step, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0' }}>
+            <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${COLORS.orange}`, background: COLORS.orange, flexShrink: 0 }} />
+            <div style={{ fontSize: 14, color: COLORS.textPrimary, fontWeight: 600 }}>{step}</div>
+          </div>
+        ))}
+        {block.notes && (
+          <div style={{ marginTop: 8, background: COLORS.notesBg, borderRadius: 14, padding: '12px 14px', fontSize: 12.5, color: COLORS.notesText, lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+            {block.notes}
+          </div>
+        )}
+        <div
+          onClick={() => onRemove(block.id)}
+          style={{ position: 'absolute', top: 14, right: 14, width: 22, height: 22, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: COLORS.textTertiary, cursor: 'pointer' }}
+        >
+          ×
+        </div>
+      </div>
     </div>
   );
 }
