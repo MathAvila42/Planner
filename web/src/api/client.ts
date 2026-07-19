@@ -1,5 +1,5 @@
 import type {
-  Cardio, CompletionsMap, DayBlock, DaySelections, Goals, MealLibrary, MealType, User, Workout, WorkoutDraft,
+  Cardio, CompletionsMap, DayBlock, DaySelections, Goals, MealLibrary, MealType, ProgressSummary, User, Workout, WorkoutDraft,
 } from './types';
 
 class ApiError extends Error {}
@@ -63,6 +63,8 @@ export const api = {
     request<{ ok: true }>(`/api/day-plan/${dow}/selections`, { method: 'PATCH', body: JSON.stringify(patch) }),
 
   getGoals: () => request<Goals | null>('/api/goals'),
+
+  getProgressSummary: (month: string) => request<ProgressSummary>(`/api/progress/summary?month=${encodeURIComponent(month)}`),
 
   getCompletions: (date: string) => request<CompletionsMap>(`/api/completions?date=${encodeURIComponent(date)}`),
   toggleCompletion: (workoutId: string, section: 'stretches' | 'exercises', itemId: string, date: string) =>

@@ -114,6 +114,17 @@ create table if not exists goals_timeline (
   sort_order integer not null default 0
 );
 
+-- History of load changes per exercise (by workout + exercise name, not the row id — edits
+-- can recreate the row at the same position). Powers the progress screen's load charts.
+create table if not exists exercise_load_log (
+  id text primary key,
+  user_id text not null references users(id) on delete cascade,
+  workout_id text not null references workouts(id) on delete cascade,
+  exercise_name text not null,
+  load text not null,
+  recorded_at timestamptz not null default now()
+);
+
 alter table users enable row level security;
 alter table meal_options enable row level security;
 alter table workouts enable row level security;
@@ -126,3 +137,4 @@ alter table day_selections enable row level security;
 alter table completions enable row level security;
 alter table goals enable row level security;
 alter table goals_timeline enable row level security;
+alter table exercise_load_log enable row level security;

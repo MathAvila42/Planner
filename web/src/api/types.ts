@@ -103,3 +103,15 @@ export interface Goals {
 }
 
 export type CompletionsMap = Record<string, { stretches: Record<string, true>; exercises: Record<string, true> }>;
+
+export interface ExerciseLoadHistory {
+  workoutId: string;
+  workoutName: string;
+  exerciseName: string;
+  history: { load: string; recordedAt: string }[];
+}
+
+export interface ProgressSummary {
+  trainedDays: number[];
+  exercises: ExerciseLoadHistory[];
+}

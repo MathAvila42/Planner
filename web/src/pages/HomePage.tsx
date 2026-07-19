@@ -38,12 +38,12 @@ function parseStepsLabel(label: string): { title: string; steps: string[] } | nu
 }
 
 export default function HomePage({
-  user, onOpenWorkout, onOpenGoals, onLogout,
+  user, onOpenWorkout, onOpenGoals, onOpenProgress,
 }: {
   user: User;
   onOpenWorkout: (id: string) => void;
   onOpenGoals: () => void;
-  onLogout: () => void;
+  onOpenProgress: () => void;
 }) {
   const [selectedDay, setSelectedDay] = useState(getTodayIdx());
   const queryClient = useQueryClient();
@@ -103,13 +103,13 @@ export default function HomePage({
             </div>
           </div>
           <div
-            onClick={onLogout}
+            onClick={onOpenProgress}
             style={{
               width: 40, height: 40, borderRadius: '50%', background: COLORS.navy, color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700,
               cursor: 'pointer', flexShrink: 0,
             }}
-            title="Sair"
+            title="Progresso"
           >
             {user.name.charAt(0)}
           </div>

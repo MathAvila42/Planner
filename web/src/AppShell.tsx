@@ -8,6 +8,7 @@ import WorkoutsList from './pages/workouts/WorkoutsList';
 import WorkoutDetail from './pages/workouts/WorkoutDetail';
 import WorkoutEditor from './pages/workouts/WorkoutEditor';
 import MealsPage from './pages/MealsPage';
+import ProgressPage from './pages/ProgressPage';
 
 export type Tab = 'home' | 'workouts' | 'meals';
 type WorkoutsSubview = 'list' | 'detail' | 'editor';
@@ -18,6 +19,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
   const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(null);
   const [editingIsNew, setEditingIsNew] = useState(false);
   const [showGoals, setShowGoals] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
 
   const setTab = (t: Tab) => {
     setTabState(t);
@@ -60,7 +62,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: COLORS.bgApp }}>
       <div style={{ flex: 1, paddingBottom: 14 }}>
         {tab === 'home' && (
-          <HomePage user={user} onOpenWorkout={openWorkout} onOpenGoals={() => setShowGoals(true)} onLogout={onLogout} />
+          <HomePage user={user} onOpenWorkout={openWorkout} onOpenGoals={() => setShowGoals(true)} onOpenProgress={() => setShowProgress(true)} />
         )}
 
         {tab === 'workouts' && workoutsSubview === 'list' && (
@@ -89,6 +91,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
       <TabBar tab={tab} onChange={setTab} />
 
       {showGoals && <GoalsSheet onClose={() => setShowGoals(false)} onLogout={onLogout} />}
+      {showProgress && <ProgressPage onBack={() => setShowProgress(false)} onLogout={onLogout} />}
     </div>
   );
 }

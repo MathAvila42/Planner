@@ -7,4 +7,5 @@ export const queryKeys = {
   daySelections: (dow: number) => ['daySelections', dow] as const,
   goals: ['goals'] as const,
   completions: (date: string) => ['completions', date] as const,
+  progress: (month: string) => ['progress', month] as const,
 };

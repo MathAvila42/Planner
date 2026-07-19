@@ -8,6 +8,18 @@ import type { Workout } from '../types.js';
 export const workoutsRouter = Router();
 workoutsRouter.use(requireAuth);
 
+// Keeps a dated history of load changes per exercise (by workout + exercise name, not the
+// row id — edits can recreate the row at the same position, and identity-by-name is what
+// actually matches the user's mental model of "this exercise's progression over time").
+async function logLoadIfChanged(userId: string, workoutId: string, exerciseName: string, oldLoad: string, newLoad: string) {
+  const trimmed = (newLoad || '').trim();
+  if (!trimmed || trimmed === (oldLoad || '').trim()) return;
+  const { error } = await supabase.from('exercise_load_log').insert({
+    id: nanoid(), user_id: userId, workout_id: workoutId, exercise_name: exerciseName, load: trimmed,
+  });
+  if (error) throw error;
+}
+
 interface WorkoutRow {
   id: string; name: string; subtitle: string; day_of_week: number | null; time: string;
   cardio_modality: string; cardio_duration: string; cardio_extra: string; notes: string;
@@ -74,7 +86,7 @@ function workoutFields(body: WorkoutPayload) {
   };
 }
 
-async function insertNestedFresh(workoutId: string, body: WorkoutPayload) {
+async function insertNestedFresh(userId: string, workoutId: string, body: WorkoutPayload) {
   const warmup = (body.warmup || []).filter((t) => t && t.trim());
   if (warmup.length) {
     const { error } = await supabase.from('workout_warmup_items').insert(
@@ -102,6 +114,7 @@ async function insertNestedFresh(workoutId: string, body: WorkoutPayload) {
       exercises.map((e, i) => ({ id: nanoid(), workout_id: workoutId, name: e.name.trim(), sets: e.sets || '', reps: e.reps || '', load: e.load || '', note: e.note || '', sort_order: i })),
     );
     if (error) throw error;
+    await Promise.all(exercises.map((e) => logLoadIfChanged(userId, workoutId, e.name.trim(), '', e.load || '')));
   }
 }
 
@@ -117,7 +130,7 @@ workoutsRouter.post('/', wrap<AuthedRequest>(async (req, res) => {
   });
   if (error) throw error;
 
-  await insertNestedFresh(id, body);
+  await insertNestedFresh(req.userId!, id, body);
   res.json(await serializeWorkout((await ownedWorkoutRow(req.userId!, id))!));
 }));
 
@@ -146,21 +159,25 @@ async function upsertTextItemsByPosition(table: 'workout_stretch_items' | 'worko
   }
 }
 
-async function upsertExercisesByPosition(workoutId: string, exercises: NonNullable<WorkoutPayload['exercises']>) {
+async function upsertExercisesByPosition(userId: string, workoutId: string, exercises: NonNullable<WorkoutPayload['exercises']>) {
   const clean = exercises.filter((e) => e.name && e.name.trim());
-  const { data: existing, error: fetchError } = await supabase.from('workout_exercises').select('id').eq('workout_id', workoutId).order('sort_order', { ascending: true });
+  const { data: existing, error: fetchError } = await supabase.from('workout_exercises').select('id, load').eq('workout_id', workoutId).order('sort_order', { ascending: true });
   if (fetchError) throw fetchError;
   const rows = existing || [];
 
   for (let i = 0; i < clean.length; i++) {
     const e = clean[i];
-    const fields = { name: e.name.trim(), sets: e.sets || '', reps: e.reps || '', load: e.load || '', note: e.note || '', sort_order: i };
+    const name = e.name.trim();
+    const load = e.load || '';
+    const fields = { name, sets: e.sets || '', reps: e.reps || '', load, note: e.note || '', sort_order: i };
     if (rows[i]) {
       const { error } = await supabase.from('workout_exercises').update(fields).eq('id', rows[i].id);
       if (error) throw error;
+      await logLoadIfChanged(userId, workoutId, name, rows[i].load || '', load);
     } else {
       const { error } = await supabase.from('workout_exercises').insert({ id: nanoid(), workout_id: workoutId, ...fields });
       if (error) throw error;
+      await logLoadIfChanged(userId, workoutId, name, '', load);
     }
   }
   const toDelete = rows.slice(clean.length).map((r) => r.id);
@@ -190,7 +207,7 @@ workoutsRouter.put('/:id', wrap<AuthedRequest>(async (req, res) => {
 
   await upsertTextItemsByPosition('workout_stretch_items', existing.id, body.stretches ?? []);
   await upsertTextItemsByPosition('workout_core_items', existing.id, body.core ?? []);
-  await upsertExercisesByPosition(existing.id, body.exercises ?? []);
+  await upsertExercisesByPosition(req.userId!, existing.id, body.exercises ?? []);
 
   res.json(await serializeWorkout((await ownedWorkoutRow(req.userId!, existing.id))!));
 }));
@@ -227,6 +244,13 @@ workoutsRouter.patch('/:workoutId/exercises/:id', wrap<AuthedRequest>(async (req
   const owned = await ownedWorkoutRow(req.userId!, req.params.workoutId);
   if (!owned) { res.status(404).json({ error: 'Exercício não encontrado.' }); return; }
   const body = req.body as { load?: string; photoUrl?: string | null };
+
+  const { data: current, error: currentError } = await supabase
+    .from('workout_exercises').select('name, load')
+    .eq('id', req.params.id).eq('workout_id', owned.id).maybeSingle();
+  if (currentError) throw currentError;
+  if (!current) { res.status(404).json({ error: 'Exercício não encontrado.' }); return; }
+
   const patch: Record<string, unknown> = {};
   if (body.load !== undefined) patch.load = body.load;
   if (body.photoUrl !== undefined) patch.photo_url = body.photoUrl;
@@ -237,6 +261,7 @@ workoutsRouter.patch('/:workoutId/exercises/:id', wrap<AuthedRequest>(async (req
     .select('id').maybeSingle();
   if (error) throw error;
   if (!data) { res.status(404).json({ error: 'Exercício não encontrado.' }); return; }
+  if (body.load !== undefined) await logLoadIfChanged(req.userId!, owned.id, current.name, current.load || '', body.load);
   res.json({ ok: true });
 }));
 
